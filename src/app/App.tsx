@@ -459,6 +459,11 @@ interface ActionDef {
 }
 
 const DEFAULT_ACTIONS: ActionDef[] = [
+  { id: "a1", label: "Action 1", color: "#16a34a", bg: "#dcfce7", border: "#86efac" },
+  { id: "a2", label: "Action 2", color: "#2563eb", bg: "#dbeafe", border: "#93c5fd" },
+];
+
+const LEGACY_ACTIONS: ActionDef[] = [
   { id: "raise",  label: "Raise",   color: "#16a34a", bg: "#dcfce7", border: "#86efac" },
   { id: "3bet",   label: "3-Bet",   color: "#2563eb", bg: "#dbeafe", border: "#93c5fd" },
   { id: "call",   label: "Call",    color: "#ca8a04", bg: "#fef9c3", border: "#fde047" },
@@ -467,16 +472,7 @@ const DEFAULT_ACTIONS: ActionDef[] = [
   { id: "allin",  label: "All-In",  color: "#dc2626", bg: "#fee2e2", border: "#fca5a5" },
 ];
 
-const DEFAULT_ACTION_IDS = new Set(DEFAULT_ACTIONS.map((a) => a.id));
-
 function getActionStyle(a: ActionDef) {
-  if (DEFAULT_ACTION_IDS.has(a.id)) {
-    return {
-      backgroundColor: `var(--action-${a.id}-bg, ${a.bg})`,
-      borderColor: `var(--action-${a.id}-border, ${a.border})`,
-      color: `var(--action-${a.id}-c, ${a.color})`,
-    };
-  }
   return {
     backgroundColor: a.bg,
     borderColor: a.border,
@@ -500,10 +496,10 @@ interface Range {
   name: string;
   grid: Record<string, string>;
   folderId: string | null;
+  actions: ActionDef[];
 }
 
 interface AppData {
-  actions: ActionDef[];
   ranges: Range[];
   drills: Drill[];
   rangeFolders: Folder[];
@@ -632,71 +628,10 @@ function SessionGrid({ comboStats }: { comboStats: Record<string, ComboStat> }) 
 
 // ─── Action manager ───────────────────────────────────────────────────────────
 
-function ActionManager({ actions, onChange }: { actions: ActionDef[]; onChange: (a: ActionDef[]) => void }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editLabel, setEditLabel] = useState("");
-
-  function startEdit(a: ActionDef) { setEditingId(a.id); setEditLabel(a.label); }
-  function commitEdit(id: string) {
-    if (!editLabel.trim()) return;
-    onChange(actions.map((a) => a.id === id ? { ...a, label: editLabel.trim() } : a));
-    setEditingId(null);
-  }
-  function addAction() {
-    const preset = COLOR_PRESETS[actions.length % COLOR_PRESETS.length];
-    const id = `action-${Date.now()}`;
-    onChange([...actions, { id, label: "New Action", ...preset }]);
-    setEditingId(id); setEditLabel("New Action");
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {actions.map((a) => (
-        <div key={a.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 border border-border bg-secondary">
-          <div className="relative group/color flex-shrink-0">
-            <div className="w-3.5 h-3.5 rounded-full border-2 cursor-pointer" style={{ backgroundColor: a.color, borderColor: a.border }} />
-            <div className="absolute left-0 top-5 z-20 hidden group-hover/color:flex flex-wrap gap-1 bg-popover border border-border rounded-md p-2 w-36 shadow-xl">
-              {COLOR_PRESETS.map((p, i) => (
-                <div key={i} onClick={() => onChange(actions.map((x) => x.id === a.id ? { ...x, ...p } : x))}
-                  className="w-5 h-5 rounded-full border-2 cursor-pointer hover:scale-110 transition-transform"
-                  style={{ backgroundColor: p.color, borderColor: p.border }} />
-              ))}
-            </div>
-          </div>
-          {editingId === a.id ? (
-            <input autoFocus value={editLabel} onChange={(e) => setEditLabel(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") commitEdit(a.id); if (e.key === "Escape") setEditingId(null); }}
-              className="flex-1 bg-transparent text-foreground text-xs font-medium focus:outline-none border-b border-primary" />
-          ) : (
-            <span className="flex-1 text-xs font-medium truncate" style={{ color: a.color }}>{a.label}</span>
-          )}
-          <div className="flex gap-1 flex-shrink-0">
-            {editingId === a.id ? (
-              <>
-                <button onClick={() => commitEdit(a.id)} className="text-primary hover:text-primary/80"><Check size={12} /></button>
-                <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => startEdit(a)} className="text-muted-foreground hover:text-foreground"><Pencil size={11} /></button>
-                {actions.length > 1 && <button onClick={() => onChange(actions.filter((x) => x.id !== a.id))} className="text-muted-foreground hover:text-destructive"><Trash2 size={11} /></button>}
-              </>
-            )}
-          </div>
-        </div>
-      ))}
-      <button onClick={addAction} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1">
-        <Plus size={12} /> Add action
-      </button>
-    </div>
-  );
-}
-
 // ─── Range Builder ────────────────────────────────────────────────────────────
 
 interface BuilderProps {
   ranges: Range[];
-  actions: ActionDef[];
   rangeFolders: Folder[];
   onSaveRange: (r: Range) => void;
   onDeleteRange: (id: string) => void;
@@ -704,27 +639,41 @@ interface BuilderProps {
   onNewRangeFolder: (parentId: string | null) => void;
   onRenameRangeFolder: (id: string, name: string) => void;
   onDeleteRangeFolder: (id: string) => void;
-  onActionsChange: (a: ActionDef[]) => void;
 }
 
-function Builder({ ranges, actions, rangeFolders, onSaveRange, onDeleteRange, onMoveRange, onNewRangeFolder, onRenameRangeFolder, onDeleteRangeFolder, onActionsChange }: BuilderProps) {
+function Builder({ ranges, rangeFolders, onSaveRange, onDeleteRange, onMoveRange, onNewRangeFolder, onRenameRangeFolder, onDeleteRangeFolder }: BuilderProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rangeName, setRangeName] = useState("New Range");
   const [grid, setGrid] = useState<Record<string, string>>({});
+  const [actions, setActions] = useState<ActionDef[]>(DEFAULT_ACTIONS.map((a, i) => ({ ...a, id: `a${i + 1}` })));
   const [selectedAction, setSelectedAction] = useState<string>(actions[0]?.id ?? "");
-  const [showActionManager, setShowActionManager] = useState(false);
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [openColorId, setOpenColorId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!actions.find((a) => a.id === selectedAction)) setSelectedAction(actions[0]?.id ?? "");
   }, [actions, selectedAction]);
 
-  function newRange() { setEditingId(null); setRangeName("New Range"); setGrid({}); }
-  function loadRange(r: Range) { setEditingId(r.id); setRangeName(r.name); setGrid({ ...r.grid }); }
+  function commitEdit(id: string) {
+    if (editLabel.trim()) {
+      setActions((prev) => prev.map((a) => a.id === id ? { ...a, label: editLabel.trim() } : a));
+    }
+    setEditingLabelId(null);
+  }
+
+  function newActionId() {
+    const max = actions.reduce((m, a) => Math.max(m, parseInt(a.id.replace(/\D/g, "")) || 0), 0);
+    return `a${max + 1}`;
+  }
+
+  function newRange() { setEditingId(null); setRangeName("New Range"); setGrid({}); setActions(DEFAULT_ACTIONS.map((a, i) => ({ ...a, id: `a${i + 1}` }))); setEditingLabelId(null); setOpenColorId(null); }
+  function loadRange(r: Range) { setEditingId(r.id); setRangeName(r.name); setGrid({ ...r.grid }); setActions(r.actions ?? LEGACY_ACTIONS); setEditingLabelId(null); setOpenColorId(null); }
   function saveRange() {
     if (!rangeName.trim()) return;
     const id = editingId ?? `range-${Date.now()}`;
     const existing = ranges.find((r) => r.id === id);
-    onSaveRange({ id, name: rangeName.trim(), grid, folderId: existing?.folderId ?? null });
+    onSaveRange({ id, name: rangeName.trim(), grid, folderId: existing?.folderId ?? null, actions });
     setEditingId(id);
   }
   const paint = useCallback((hand: string) => {
@@ -767,13 +716,6 @@ function Builder({ ranges, actions, rangeFolders, onSaveRange, onDeleteRange, on
             }}
           />
         </div>
-        <div className="border-t border-border pt-3 flex-shrink-0">
-          <button onClick={() => setShowActionManager((v) => !v)} className="text-xs font-medium text-muted-foreground hover:text-foreground w-full flex items-center justify-between mb-2 transition-colors">
-            <span className="uppercase tracking-wider">Actions</span>
-            {showActionManager ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          </button>
-          {showActionManager && <ActionManager actions={actions} onChange={onActionsChange} />}
-        </div>
       </aside>
 
       <div className="flex-1 flex flex-col gap-4 min-w-0">
@@ -783,15 +725,48 @@ function Builder({ ranges, actions, rangeFolders, onSaveRange, onDeleteRange, on
           <button onClick={saveRange} className="text-xs px-4 py-2 rounded-full bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors">Save</button>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-3 flex-wrap items-center">
           {actions.map((a) => {
-            const aStyle = getActionStyle(a);
+            const isSelected = selectedAction === a.id;
+            const isEditing = editingLabelId === a.id;
             return (
-              <button key={a.id} onClick={() => setSelectedAction(a.id)} style={{ backgroundColor: selectedAction === a.id ? aStyle.backgroundColor : "transparent", borderColor: selectedAction === a.id ? aStyle.borderColor : "var(--border)", color: selectedAction === a.id ? aStyle.color : "var(--muted-foreground)", boxShadow: selectedAction === a.id ? `0 0 8px ${aStyle.color}40` : undefined }} className="px-3 py-1.5 rounded-full border text-xs font-semibold transition-all whitespace-nowrap">
-                {a.label}
-              </button>
+              <div key={a.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${isSelected ? "ring-1" : ""}`}
+                style={{ borderColor: isSelected ? a.color : "var(--border)", backgroundColor: isSelected ? `${a.color}15` : "transparent" }}>
+                <div className="relative flex-shrink-0">
+                  <div className="w-3 h-3 rounded-full border cursor-pointer" style={{ backgroundColor: a.color, borderColor: a.border }}
+                    onClick={(e) => { e.stopPropagation(); setOpenColorId(openColorId === a.id ? null : a.id); }} />
+                  {openColorId === a.id && (
+                    <div className="absolute left-0 top-4 z-20 flex flex-wrap gap-1 bg-popover border border-border rounded-md p-1.5 w-32 shadow-xl">
+                      {COLOR_PRESETS.map((p, i) => (
+                        <div key={i} onClick={() => { setActions((prev) => prev.map((x) => x.id === a.id ? { ...x, ...p } : x)); setOpenColorId(null); }}
+                          className="w-4 h-4 rounded-full border-2 cursor-pointer hover:scale-110 transition-transform"
+                          style={{ backgroundColor: p.color, borderColor: p.border }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {isEditing ? (
+                  <input autoFocus value={editLabel} onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") commitEdit(a.id); if (e.key === "Escape") setEditingLabelId(null); }}
+                    onBlur={() => commitEdit(a.id)}
+                    className="w-14 bg-transparent text-foreground text-xs font-semibold focus:outline-none border-b border-primary" />
+                ) : (
+                  <span className="cursor-pointer whitespace-nowrap text-muted-foreground hover:text-foreground" onClick={() => setSelectedAction(a.id)}>{a.label}</span>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); setEditingLabelId(a.id); setEditLabel(a.label); }}
+                  className="text-muted-foreground hover:text-foreground flex-shrink-0"><Pencil size={12} /></button>
+                {actions.length > 1 && (
+                  <button onClick={(e) => { e.stopPropagation(); setActions((prev) => prev.filter((x) => x.id !== a.id)); if (selectedAction === a.id) setSelectedAction(actions.find((x) => x.id !== a.id)?.id ?? ""); }}
+                    className="text-muted-foreground hover:text-destructive flex-shrink-0"><X size={12} /></button>
+                )}
+              </div>
             );
           })}
+          <button onClick={() => { const id = newActionId(); const preset = COLOR_PRESETS[actions.length % COLOR_PRESETS.length]; setActions((prev) => [...prev, { id, label: "New Action", ...preset }]); setEditingLabelId(id); setEditLabel("New Action"); }}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-border text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors">
+            <Plus size={14} /> Add action
+          </button>
         </div>
 
         <div className="flex-1 flex gap-5 min-h-0">
@@ -831,7 +806,6 @@ function pickRandomHand(grid: Record<string, string>): string | null {
 
 interface TrainerProps {
   ranges: Range[];
-  actions: ActionDef[];
   drills: Drill[];
   drillFolders: Folder[];
   onSaveDrill: (d: Drill) => void;
@@ -842,7 +816,7 @@ interface TrainerProps {
   onDeleteDrillFolder: (id: string) => void;
 }
 
-function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteDrill, onMoveDrill, onNewDrillFolder, onRenameDrillFolder, onDeleteDrillFolder }: TrainerProps) {
+function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onMoveDrill, onNewDrillFolder, onRenameDrillFolder, onDeleteDrillFolder }: TrainerProps) {
   const [view, setView] = useState<TrainerView>("drills");
   const [selectedDrillId, setSelectedDrillId] = useState<string | null>(null);
   const [editingDrill, setEditingDrill] = useState<Drill | undefined>(undefined);
@@ -860,8 +834,9 @@ function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteD
 
   const selectedDrill = drills.find((d) => d.id === selectedDrillId) ?? null;
   const selectedRange = selectedDrill ? ranges.find((r) => r.id === selectedDrill.rangeId) ?? null : null;
-  const actionMap = Object.fromEntries(actions.map((a) => [a.id, a]));
-  const rangeActions = selectedRange ? actions.filter((a) => Object.values(selectedRange.grid).includes(a.id)) : actions;
+  const rangeActionsList = selectedRange?.actions ?? [];
+  const actionMap = Object.fromEntries(rangeActionsList.map((a) => [a.id, a]));
+  const rangeActions = selectedRange ? rangeActionsList.filter((a) => Object.values(selectedRange.grid).includes(a.id)) : rangeActionsList;
   const currentSession = sessions.find((s) => s.id === currentSessionId) ?? null;
   const viewingSession = sessions.find((s) => s.id === viewingSessionId) ?? null;
   const activeSession = sessions.find((s) => s.drillId === selectedDrillId && s.endedAt === null) ?? null;
@@ -1159,7 +1134,7 @@ function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteD
                   {revealGrid ? "▼ Range map" : "▶ Range map"}
                 </button>
                 {revealGrid && (
-                  <RangeGrid grid={selectedRange.grid} actions={actions} selectedAction="" onPaint={() => {}} readOnly highlightHand={currentHand} />
+                  <RangeGrid grid={selectedRange.grid} actions={selectedRange.actions} selectedAction="" onPaint={() => {}} readOnly highlightHand={currentHand} />
                 )}
               </div>
             )}
@@ -1638,14 +1613,13 @@ export default function App() {
   const { theme, setTheme } = useTheme();
   const saved = useRef(loadFromStorage()).current;
   const [tab, setTab] = useState<"builder" | "trainer">("builder");
-  const [ranges, setRanges] = useState<Range[]>(() => (saved.ranges ?? []).map((r) => ({ ...r, folderId: r.folderId ?? null })));
-  const [actions, setActions] = useState<ActionDef[]>(saved.actions ?? DEFAULT_ACTIONS);
+  const [ranges, setRanges] = useState<Range[]>(() => (saved.ranges ?? []).map((r) => ({ ...r, folderId: r.folderId ?? null, actions: r.actions ?? LEGACY_ACTIONS })));
   const [drills, setDrills] = useState<Drill[]>(() => (saved.drills ?? []).map((d) => ({ ...d, folderId: d.folderId ?? null })));
   const [rangeFolders, setRangeFolders] = useState<Folder[]>(saved.rangeFolders ?? []);
   const [drillFolders, setDrillFolders] = useState<Folder[]>(saved.drillFolders ?? []);
   const importRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { saveToStorage({ actions, ranges, drills, rangeFolders, drillFolders }); }, [actions, ranges, drills, rangeFolders, drillFolders]);
+  useEffect(() => { saveToStorage({ ranges, drills, rangeFolders, drillFolders }); }, [ranges, drills, rangeFolders, drillFolders]);
 
   function saveRange(range: Range) {
     setRanges((prev) => {
@@ -1720,7 +1694,7 @@ export default function App() {
   }
 
   function exportData() {
-    const data: AppData = { actions, ranges, drills, rangeFolders, drillFolders };
+    const data: AppData = { ranges, drills, rangeFolders, drillFolders };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1737,8 +1711,7 @@ export default function App() {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string) as Partial<AppData>;
-        if (data.actions && Array.isArray(data.actions)) setActions(data.actions);
-        if (data.ranges && Array.isArray(data.ranges)) setRanges(data.ranges.map((r) => ({ ...r, folderId: r.folderId ?? null })));
+        if (data.ranges && Array.isArray(data.ranges)) setRanges(data.ranges.map((r) => ({ ...r, folderId: r.folderId ?? null, actions: r.actions ?? LEGACY_ACTIONS })));
         if (data.drills && Array.isArray(data.drills)) setDrills(data.drills.map((d) => ({ ...d, folderId: d.folderId ?? null })));
         if (data.rangeFolders && Array.isArray(data.rangeFolders)) setRangeFolders(data.rangeFolders);
         if (data.drillFolders && Array.isArray(data.drillFolders)) setDrillFolders(data.drillFolders);
@@ -1784,9 +1757,9 @@ export default function App() {
 
         <main className="flex-1 overflow-hidden p-5">
           {tab === "builder" ? (
-            <Builder ranges={ranges} actions={actions} rangeFolders={rangeFolders} onSaveRange={saveRange} onDeleteRange={deleteRange} onMoveRange={moveRange} onNewRangeFolder={newRangeFolder} onRenameRangeFolder={renameRangeFolder} onDeleteRangeFolder={deleteRangeFolder} onActionsChange={setActions} />
+            <Builder ranges={ranges} rangeFolders={rangeFolders} onSaveRange={saveRange} onDeleteRange={deleteRange} onMoveRange={moveRange} onNewRangeFolder={newRangeFolder} onRenameRangeFolder={renameRangeFolder} onDeleteRangeFolder={deleteRangeFolder} />
           ) : (
-            <Trainer ranges={ranges} actions={actions} drills={drills} drillFolders={drillFolders} onSaveDrill={saveDrill} onDeleteDrill={deleteDrill} onMoveDrill={moveDrill} onNewDrillFolder={newDrillFolder} onRenameDrillFolder={renameDrillFolder} onDeleteDrillFolder={deleteDrillFolder} />
+            <Trainer ranges={ranges} drills={drills} drillFolders={drillFolders} onSaveDrill={saveDrill} onDeleteDrill={deleteDrill} onMoveDrill={moveDrill} onNewDrillFolder={newDrillFolder} onRenameDrillFolder={renameDrillFolder} onDeleteDrillFolder={deleteDrillFolder} />
           )}
         </main>
       </div>
