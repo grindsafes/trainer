@@ -709,9 +709,14 @@ function Builder({ ranges, rangeFolders, onSaveRange, onDeleteRange, onMoveRange
             renderItem={(item) => {
               const isSelected = item.id === editingId;
               return (
-                <div className={`group flex items-center justify-between py-2 rounded-md cursor-pointer transition-colors text-xs ${isSelected ? "bg-accent text-accent-foreground px-3" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
-                  <span className="truncate font-medium">{item.name}</span>
-                  <button onClick={(e) => { e.stopPropagation(); onDeleteRange(item.id); if (editingId === item.id) newRange(); }} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"><X size={10} /></button>
+                <div className={`group flex items-center justify-between py-2 rounded-md cursor-pointer transition-colors ${isSelected ? "bg-secondary text-foreground px-3" : "hover:bg-secondary"}`}>
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-xs font-medium truncate ${isSelected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
+                    <span className="text-[9px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>RANGE</span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0 ml-1">
+                    <button onClick={(e) => { e.stopPropagation(); onDeleteRange(item.id); if (editingId === item.id) newRange(); }} className="text-muted-foreground hover:text-destructive transition-all" title="Delete range"><Trash2 size={16} /></button>
+                  </div>
                 </div>
               );
             }}
@@ -1047,18 +1052,18 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
                 const d = drills.find((x) => x.id === item.id);
                 const active = item.id === selectedDrillId;
                 return (
-                  <div className={`group flex items-start justify-between py-2 rounded-md cursor-pointer transition-colors ${active ? "bg-accent px-3" : "hover:bg-secondary"}`}>
+                  <div className={`group flex items-center justify-between py-2 rounded-md cursor-pointer transition-colors ${active ? "bg-secondary text-foreground px-3" : "hover:bg-secondary"}`}>
                     <div className="flex flex-col min-w-0">
-                      <span className={`text-xs font-medium truncate ${active ? "text-accent-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
+                      <span className={`text-xs font-medium truncate ${active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
                       {d && (
                         <span className="text-[9px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           {d.numPlayers}p · {d.heroPosition}
                         </span>
                       )}
                     </div>
-                    <div className="flex gap-1 flex-shrink-0 ml-1">
-                      <button onClick={(e) => { e.stopPropagation(); if (d) editDrill(d); }} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"><Pencil size={9} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); onDeleteDrill(item.id); if (selectedDrillId === item.id) { setSelectedDrillId(null); setView("drills"); } }} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"><Trash2 size={9} /></button>
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-1">
+                      <button onClick={(e) => { e.stopPropagation(); if (d) editDrill(d); }} className="text-muted-foreground hover:text-foreground transition-all" title="Edit drill"><Pencil size={16} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteDrill(item.id); if (selectedDrillId === item.id) { setSelectedDrillId(null); setView("drills"); } }} className="text-muted-foreground hover:text-destructive transition-all" title="Delete drill"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 );
@@ -1158,7 +1163,7 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
                         key={s.id}
                         onClick={() => viewSession(s.id)}
                         className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-colors text-xs ${
-                          viewingSessionId === s.id ? "bg-accent text-accent-foreground" : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                          viewingSessionId === s.id ? "bg-secondary text-foreground" : "hover:bg-secondary text-muted-foreground hover:text-foreground"
                         }`}
                       >
                         <div className="flex flex-col min-w-0">
@@ -1481,7 +1486,7 @@ function FolderNode({
   return (
     <div ref={dropRef} className={`transition-colors rounded-sm ${isOver ? "bg-accent/50" : ""}`}>
       <div
-        className="flex items-center gap-1 py-1 rounded-sm hover:bg-secondary cursor-pointer group"
+        className="flex items-center gap-1 py-2 rounded-md hover:bg-secondary cursor-pointer group"
         style={{ paddingLeft: `${depth * 16}px` }}
         onClick={() => onToggleFolder(folder.id)}
       >
@@ -1497,21 +1502,24 @@ function FolderNode({
             className="flex-1 bg-secondary text-foreground text-xs font-medium px-2 py-0.5 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary"
           />
         ) : (
-          <span className="text-xs font-medium text-muted-foreground truncate flex-1">{folder.name}</span>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-xs font-medium text-muted-foreground truncate">{folder.name}</span>
+            <span className="text-[9px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>FOLDER</span>
+          </div>
         )}
         <button
           onClick={(e) => { e.stopPropagation(); onStartRename(folder.id, folder.name); }}
           className="text-muted-foreground hover:text-foreground transition-all flex-shrink-0"
           title="Rename folder"
         >
-          <Pencil size={10} />
+          <Pencil size={16} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder.id); }}
           className="text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
           title="Delete folder"
         >
-          <Trash2 size={10} />
+          <Trash2 size={16} />
         </button>
       </div>
       {isExpanded && (
