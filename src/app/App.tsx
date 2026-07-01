@@ -1098,6 +1098,10 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
               renderItem={(item) => {
                 const d = drills.find((x) => x.id === item.id);
                 const active = item.id === selectedDrillId;
+                const drillSessions = sessions.filter((s) => s.drillId === item.id && s.endedAt !== null);
+                const totalCorrect = drillSessions.reduce((sum, s) => sum + s.correct, 0);
+                const totalHands = drillSessions.reduce((sum, s) => sum + s.total, 0);
+                const avg = totalHands > 0 ? ((totalCorrect / totalHands) * 100).toFixed(1) : null;
                 return (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col min-w-0">
@@ -1105,6 +1109,14 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
                       {d && (
                         <span className="text-[9px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           {d.numPlayers}p · {d.heroPosition}
+                        </span>
+                      )}
+                      {avg && (
+                        <span className="text-[9px]" style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          color: parseFloat(avg) >= 80 ? "#22c55e" : parseFloat(avg) >= 60 ? "#fbbf24" : "#ef4444",
+                        }}>
+                          Avg. {avg}%
                         </span>
                       )}
                     </div>
