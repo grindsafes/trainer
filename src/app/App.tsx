@@ -1509,7 +1509,19 @@ function FolderNode({
         onClick={() => onToggleFolder(folder.id)}
       >
         {isExpanded ? <ChevronDown size={12} className="text-muted-foreground flex-shrink-0" /> : <ChevronRight size={12} className="text-muted-foreground flex-shrink-0" />}
-        <span className="text-xs font-medium text-muted-foreground truncate flex-1">{folder.name}</span>
+        {renamingId === folder.id ? (
+          <input
+            autoFocus
+            value={renameValue}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onRenameChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") onCommitRename(); if (e.key === "Escape") onCancelRename(); }}
+            onBlur={onCommitRename}
+            className="flex-1 bg-secondary text-foreground text-xs font-medium px-2 py-0.5 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground truncate flex-1">{folder.name}</span>
+        )}
         <button
           onClick={(e) => { e.stopPropagation(); onStartRename(folder.id, folder.name); }}
           className="text-muted-foreground hover:text-foreground transition-all flex-shrink-0"
@@ -1525,18 +1537,6 @@ function FolderNode({
           <Trash2 size={10} />
         </button>
       </div>
-      {renamingId === folder.id && (
-        <div style={{ paddingLeft: `${16 + depth * 16}px` }} className="px-1 pb-1">
-          <input
-            autoFocus
-            value={renameValue}
-            onChange={(e) => onRenameChange(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") onCommitRename(); if (e.key === "Escape") onCancelRename(); }}
-            onBlur={onCommitRename}
-            className="w-full bg-secondary text-foreground text-xs px-2 py-1 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-      )}
       {isExpanded && (
         <div>
           {childFolders.map((cf) => (
