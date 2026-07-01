@@ -336,7 +336,7 @@ function DrillEditor({ initial, ranges, onSave, onCancel }: DrillEditorProps) {
             <button
               key={n}
               onClick={() => setNumPlayers(n)}
-              className="w-10 h-10 rounded-md border text-sm font-semibold transition-all"
+              className="w-10 h-10 rounded-full border text-sm font-semibold transition-all"
               style={{
                 backgroundColor: numPlayers === n ? "var(--accent)" : "transparent",
                 borderColor: numPlayers === n ? "var(--primary)" : "var(--border)",
@@ -425,13 +425,13 @@ function DrillEditor({ initial, ranges, onSave, onCancel }: DrillEditorProps) {
         <button
           onClick={save}
           disabled={!rangeId}
-          className="px-5 py-2 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-5 py-2 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {initial ? "Update Drill" : "Save Drill"}
         </button>
         <button
           onClick={onCancel}
-          className="px-4 py-2 rounded-md border border-border text-muted-foreground text-sm hover:text-foreground transition-colors"
+          className="px-4 py-2 rounded-full border border-border text-muted-foreground text-sm hover:text-foreground transition-colors"
         >
           Cancel
         </button>
@@ -740,7 +740,7 @@ function Builder({ ranges, actions, rangeFolders, onSaveRange, onDeleteRange, on
   return (
     <div className="flex gap-5 h-full">
       <aside className="w-52 flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
-        <button onClick={newRange} className="w-full text-sm font-semibold py-2 px-3 rounded-md border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors flex-shrink-0">
+        <button onClick={newRange} className="w-full text-sm font-semibold py-2 px-3 rounded-full border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors flex-shrink-0">
           + New Range
         </button>
         <div className="flex items-center justify-between flex-shrink-0">
@@ -779,15 +779,15 @@ function Builder({ ranges, actions, rangeFolders, onSaveRange, onDeleteRange, on
       <div className="flex-1 flex flex-col gap-4 min-w-0">
         <div className="flex items-center gap-3">
           <input value={rangeName} onChange={(e) => setRangeName(e.target.value)} className="flex-1 bg-secondary text-foreground text-sm font-medium px-3 py-2 rounded-md border border-border focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Range name..." />
-          <button onClick={() => setGrid({})} className="text-xs px-3 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">Clear</button>
-          <button onClick={saveRange} className="text-xs px-4 py-2 rounded-md bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors">Save</button>
+          <button onClick={() => setGrid({})} className="text-xs px-3 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">Clear</button>
+          <button onClick={saveRange} className="text-xs px-4 py-2 rounded-full bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors">Save</button>
         </div>
 
         <div className="flex gap-2 flex-wrap">
           {actions.map((a) => {
             const aStyle = getActionStyle(a);
             return (
-              <button key={a.id} onClick={() => setSelectedAction(a.id)} style={{ backgroundColor: selectedAction === a.id ? aStyle.backgroundColor : "transparent", borderColor: selectedAction === a.id ? aStyle.borderColor : "var(--border)", color: selectedAction === a.id ? aStyle.color : "var(--muted-foreground)", boxShadow: selectedAction === a.id ? `0 0 8px ${aStyle.color}40` : undefined }} className="px-3 py-1.5 rounded-md border text-xs font-semibold transition-all whitespace-nowrap">
+              <button key={a.id} onClick={() => setSelectedAction(a.id)} style={{ backgroundColor: selectedAction === a.id ? aStyle.backgroundColor : "transparent", borderColor: selectedAction === a.id ? aStyle.borderColor : "var(--border)", color: selectedAction === a.id ? aStyle.color : "var(--muted-foreground)", boxShadow: selectedAction === a.id ? `0 0 8px ${aStyle.color}40` : undefined }} className="px-3 py-1.5 rounded-full border text-xs font-semibold transition-all whitespace-nowrap">
                 {a.label}
               </button>
             );
@@ -1106,10 +1106,10 @@ function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteD
                 </p>
                 <p className="text-xs text-muted-foreground text-center">{stats.correct}/{stats.total} correct</p>
                 <div className="flex gap-2 mt-2">
-                  <button onClick={resumeTraining} className="flex-1 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
+                  <button onClick={resumeTraining} className="flex-1 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
                     Resume
                   </button>
-                  <button onClick={stopTraining} className="flex-1 py-1.5 rounded-md bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
+                  <button onClick={stopTraining} className="flex-1 py-1.5 rounded-full bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
                     End
                   </button>
                 </div>
@@ -1147,7 +1147,7 @@ function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteD
 
             {/* End Session button (shown during active training) */}
             {phase !== "idle" && (
-              <button onClick={stopTraining} className="flex items-center justify-center gap-2 w-full py-2 rounded-md bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
+              <button onClick={stopTraining} className="flex items-center justify-center gap-2 w-full py-2 rounded-full bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
                 <Square size={10} /> End Session
               </button>
             )}
@@ -1218,7 +1218,7 @@ function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteD
                 {drills.length === 0 ? "Create a drill to define your table setup and start training." : "Select a drill from the sidebar or create a new one."}
               </p>
             </div>
-            <button onClick={startNewDrill} className="flex items-center gap-2 px-5 py-2.5 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
+            <button onClick={startNewDrill} className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
               <Plus size={15} /> Create Drill
             </button>
           </div>
@@ -1313,7 +1313,7 @@ function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteD
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">{stats.correct}/{stats.total} correct</p>
                     </div>
-                    <button onClick={resumeTraining} disabled={!selectedRange} className="px-6 py-2.5 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    <button onClick={resumeTraining} disabled={!selectedRange} className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                       Resume Current Session
                     </button>
                     <button onClick={startTraining} className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
@@ -1321,7 +1321,7 @@ function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteD
                     </button>
                   </div>
                 ) : (
-                  <button onClick={startTraining} disabled={!selectedRange} className="px-6 py-2.5 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button onClick={startTraining} disabled={!selectedRange} className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     Start Training
                   </button>
                 )}
@@ -1347,7 +1347,7 @@ function Trainer({ ranges, actions, drills, drillFolders, onSaveDrill, onDeleteD
                     {rangeActions.map((a) => (
                       <button key={a.id} onClick={() => answer(a.id)} disabled={userAnswer !== null}
                         style={getActionStyle(a)}
-                        className="py-3 rounded-md border font-semibold text-sm hover:brightness-125 transition-all active:scale-95 truncate px-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:brightness-75">
+                        className="py-3 rounded-full border font-semibold text-sm hover:brightness-125 transition-all active:scale-95 truncate px-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:brightness-75">
                         {a.label}
                       </button>
                     ))}
@@ -1758,7 +1758,7 @@ export default function App() {
           </div>
           <nav className="flex gap-1">
             {(["builder", "trainer"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === t ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              <button key={t} onClick={() => setTab(t)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${tab === t ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
                 {t === "builder" ? "Range Builder" : "Trainer"}
               </button>
             ))}
@@ -1767,15 +1767,15 @@ export default function App() {
             <span className="text-xs text-muted-foreground mr-2">{ranges.length} range{ranges.length !== 1 ? "s" : ""} · {drills.length} drill{drills.length !== 1 ? "s" : ""}</span>
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
               title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             >
               {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
             </button>
-            <button onClick={exportData} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">
+            <button onClick={exportData} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">
               <Download size={13} /> Export
             </button>
-            <button onClick={() => importRef.current?.click()} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">
+            <button onClick={() => importRef.current?.click()} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">
               <Upload size={13} /> Import
             </button>
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={importData} />
