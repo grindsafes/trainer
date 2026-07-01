@@ -200,7 +200,7 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
                   x={T_CX + (x - T_CX) * 0.72 + 9}
                   y={T_CY + (y - T_CY) * 0.72 + 0.5}
                   textAnchor="start" dominantBaseline="middle"
-                  style={{ fill: isFolded ? "var(--muted-foreground)" : "var(--card-foreground)" }}
+                  style={{ fill: isFolded ? "var(--muted-foreground)" : "#e8eaed" }}
                   fontSize={6.5}
                   fontWeight={600}
                   fontFamily="JetBrains Mono, monospace"
@@ -363,6 +363,7 @@ function DrillEditor({ initial, ranges, onSave, onCancel }: DrillEditorProps) {
             positions={getPositions(numPlayers)}
             heroPosition={heroPosition}
             onSelectHero={setHeroPosition}
+            betSizes={betSizes}
           />
         </div>
         <p className="text-xs text-muted-foreground text-center">
@@ -1845,7 +1846,7 @@ export default function App() {
   const saved = useRef(loadFromStorage()).current;
   const [tab, setTab] = useState<"builder" | "trainer">("builder");
   const [ranges, setRanges] = useState<Range[]>(() => (saved.ranges ?? []).map((r) => ({ ...r, folderId: r.folderId ?? null, actions: r.actions ?? LEGACY_ACTIONS })));
-  const [drills, setDrills] = useState<Drill[]>(() => (saved.drills ?? []).map((d) => ({ ...d, folderId: d.folderId ?? null })));
+  const [drills, setDrills] = useState<Drill[]>(() => (saved.drills ?? []).map((d) => ({ ...d, folderId: d.folderId ?? null, betSizes: d.betSizes ?? {} })));
   const [rangeFolders, setRangeFolders] = useState<Folder[]>(saved.rangeFolders ?? []);
   const [drillFolders, setDrillFolders] = useState<Folder[]>(saved.drillFolders ?? []);
   const importRef = useRef<HTMLInputElement>(null);
