@@ -52,11 +52,8 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
   const heroIdx = positions.indexOf(heroPosition);
   const interactive = !!onSelectHero;
 
-  function renderHeroCards(hand: string, cx: number, cy: number) {
-    const isPair = hand.length === 2;
-    const isSuited = hand.endsWith("s");
-    const suits = isPair ? ["♠", "♥"] : isSuited ? ["♠", "♠"] : ["♠", "♥"];
-    const suitColors = ["var(--card-foreground)", "#ef4444"];
+  function renderHeroCards(combo: string, cx: number, cy: number) {
+    const { ranks, suits, colors } = parseCombo(combo);
     const cw = 22, ch = 32, gap = 2;
     const startX = cx - cw - gap / 2;
 
@@ -65,10 +62,10 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
         {[0, 1].map((i) => (
           <g key={i}>
             <rect x={startX + i * (cw + gap)} y={cy - ch / 2} width={cw} height={ch} rx={3} style={{ fill: "var(--card)", stroke: "var(--border)" }} strokeWidth={1} />
-            <text x={startX + i * (cw + gap) + cw / 2} y={cy - 3} textAnchor="middle" dominantBaseline="middle" fill={suitColors[i]} fontSize={10} fontWeight={700} fontFamily="JetBrains Mono, monospace">
-              {hand[i]}
+            <text x={startX + i * (cw + gap) + cw / 2} y={cy - 3} textAnchor="middle" dominantBaseline="middle" fill={colors[i]} fontSize={10} fontWeight={700} fontFamily="JetBrains Mono, monospace">
+              {ranks[i]}
             </text>
-            <text x={startX + i * (cw + gap) + cw / 2} y={cy + 9} textAnchor="middle" dominantBaseline="middle" fill={suitColors[i]} fontSize={8}>
+            <text x={startX + i * (cw + gap) + cw / 2} y={cy + 9} textAnchor="middle" dominantBaseline="middle" fill={colors[i]} fontSize={8}>
               {suits[i]}
             </text>
           </g>
@@ -451,6 +448,39 @@ function getHandLabel(row: number, col: number): string {
   return RANKS[col] + RANKS[row] + "o";
 }
 
+const SUIT_MAP: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
+const BLACK_SUIT_CHARS = ["s", "c"];
+const RED_SUIT_CHARS = ["h", "d"];
+const ALL_SUIT_CHARS = ["s", "h", "d", "c"];
+
+function expandHand(hand: string): string {
+  const isSuited = hand.endsWith("s");
+  const isPair = hand.length === 2;
+  if (isSuited) {
+    const suit = ALL_SUIT_CHARS[Math.floor(Math.random() * 4)];
+    return hand[0] + suit + hand[1] + suit;
+  }
+  if (isPair) {
+    const s1 = BLACK_SUIT_CHARS[Math.floor(Math.random() * 2)];
+    const s2 = RED_SUIT_CHARS[Math.floor(Math.random() * 2)];
+    return hand[0] + s1 + hand[1] + s2;
+  }
+  const s1 = BLACK_SUIT_CHARS[Math.floor(Math.random() * 2)];
+  const s2 = RED_SUIT_CHARS[Math.floor(Math.random() * 2)];
+  return hand[0] + s1 + hand[1] + s2;
+}
+
+function parseCombo(combo: string): { ranks: string[]; suits: string[]; colors: string[] } {
+  return {
+    ranks: [combo[0], combo[2]],
+    suits: [SUIT_MAP[combo[1]], SUIT_MAP[combo[3]]],
+    colors: [
+      combo[1] === "h" || combo[1] === "d" ? "#ef4444" : "var(--card-foreground)",
+      combo[3] === "h" || combo[3] === "d" ? "#ef4444" : "var(--card-foreground)",
+    ],
+  };
+}
+
 interface ActionDef {
   id: string;
   label: string;
@@ -519,7 +549,7 @@ interface SessionData {
   endedAt: number | null;
   total: number;
   correct: number;
-  history: { hand: string; correct: boolean }[];
+  history: { hand: string; combo?: string; correct: boolean }[];
   comboStats: Record<string, ComboStat>;
 }
 
@@ -810,11 +840,6 @@ function Builder({ ranges, rangeFolders, onSaveRange, onDeleteRange, onDuplicate
 type TrainerPhase = "idle" | "question" | "result";
 type TrainerView = "drills" | "edit-drill" | "training";
 
-function pickRandomHand(grid: Record<string, string>): string | null {
-  const hands = Object.keys(grid);
-  return hands.length === 0 ? null : hands[Math.floor(Math.random() * hands.length)];
-}
-
 interface TrainerProps {
   ranges: Range[];
   drills: Drill[];
@@ -836,8 +861,10 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
   // Training state
   const [phase, setPhase] = useState<TrainerPhase>("idle");
   const [currentHand, setCurrentHand] = useState<string | null>(null);
+  const [currentCombo, setCurrentCombo] = useState<string | null>(null);
   const [userAnswer, setUserAnswer] = useState<string | null>(null);
   const [revealGrid, setRevealGrid] = useState(false);
+  const recentHandsRef = useRef<string[]>([]);
 
   // Session state
   const [sessions, setSessions] = useState<SessionData[]>(() => loadSessions());
@@ -909,6 +936,7 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
     setSessions(allSessions);
     setCurrentSessionId(newSession.id);
     saveSessions(allSessions);
+    recentHandsRef.current = [];
     nextHand(selectedRange);
   }
 
@@ -928,16 +956,31 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
     saveSessions(updatedSessions);
     setPhase("idle");
     setCurrentHand(null);
+    setCurrentCombo(null);
     setUserAnswer(null);
     setRevealGrid(false);
   }
 
   function nextHand(range: Range) {
-    const hand = pickRandomHand(range.grid);
+    const hands = Object.keys(range.grid);
+    if (hands.length === 0) {
+      setCurrentHand(null);
+      setPhase("idle");
+      return;
+    }
+    const recent = recentHandsRef.current;
+    let eligible = hands.filter((h) => !recent.includes(h));
+    if (eligible.length === 0 && hands.length > 1) {
+      eligible = hands.filter((h) => h !== recent[recent.length - 1]);
+    }
+    if (eligible.length === 0) eligible = hands;
+    const hand = eligible[Math.floor(Math.random() * eligible.length)];
     setCurrentHand(hand);
+    setCurrentCombo(expandHand(hand));
     setUserAnswer(null);
     setRevealGrid(false);
-    setPhase(hand ? "question" : "idle");
+    setPhase("question");
+    recentHandsRef.current = [...recent, hand].slice(-20);
   }
 
   function answer(actionId: string) {
@@ -958,7 +1001,7 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
         ...s,
         total: s.total + 1,
         correct: s.correct + (isCorrect ? 1 : 0),
-        history: [{ hand: currentHand, correct: isCorrect }, ...s.history],
+        history: [{ hand: currentHand, combo: currentCombo!, correct: isCorrect }, ...s.history],
         comboStats: {
           ...s.comboStats,
           [currentHand]: {
@@ -985,34 +1028,28 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
     return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
-  function renderHandCards(hand: string) {
-    const isPair = hand.length === 2;
-    const isSuited = hand.endsWith("s");
-    const suits = isPair ? ["♠", "♥"] : isSuited ? ["♠", "♠"] : ["♠", "♥"];
-    const suitColors = ["var(--card-foreground)", "#ef4444"];
+  function renderHandCards(combo: string) {
+    const { ranks, suits, colors } = parseCombo(combo);
     return (
       <div className="flex gap-3 justify-center">
-        {[hand[0], hand[1]].map((rank, i) => (
+        {[0, 1].map((i) => (
           <div key={i} className="rounded-xl border border-border flex flex-col items-center justify-center" style={{ width: 72, height: 96, backgroundColor: "var(--card)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 32, fontWeight: 700, color: "var(--card-foreground)", lineHeight: 1 }}>{rank}</span>
-            <span style={{ fontSize: 22, color: suitColors[i], lineHeight: 1, marginTop: 4 }}>{suits[i]}</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 32, fontWeight: 700, color: "var(--card-foreground)", lineHeight: 1 }}>{ranks[i]}</span>
+            <span style={{ fontSize: 22, color: colors[i], lineHeight: 1, marginTop: 4 }}>{suits[i]}</span>
           </div>
         ))}
       </div>
     );
   }
 
-  function renderMiniHandCards(hand: string) {
-    const isPair = hand.length === 2;
-    const isSuited = hand.endsWith("s");
-    const suits = isPair ? ["♠", "♥"] : isSuited ? ["♠", "♠"] : ["♠", "♥"];
-    const suitColors = ["var(--card-foreground)", "#ef4444"];
+  function renderMiniHandCards(combo: string) {
+    const { ranks, suits, colors } = parseCombo(combo);
     return (
       <div className="flex gap-0.5">
-        {[hand[0], hand[1]].map((rank, i) => (
+        {[0, 1].map((i) => (
           <div key={i} className="rounded border border-border flex flex-col items-center justify-center" style={{ width: 36, height: 48, backgroundColor: "var(--card)" }}>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: "var(--card-foreground)", lineHeight: 1 }}>{rank}</span>
-            <span style={{ fontSize: 11, color: suitColors[i], lineHeight: 1 }}>{suits[i]}</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: "var(--card-foreground)", lineHeight: 1 }}>{ranks[i]}</span>
+            <span style={{ fontSize: 11, color: colors[i], lineHeight: 1 }}>{suits[i]}</span>
           </div>
         ))}
       </div>
@@ -1124,7 +1161,7 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
                 <div className="flex flex-col gap-1 max-h-40 overflow-y-auto pr-1">
                   {currentSession.history.map((entry, i) => (
                     <div key={i} className="flex items-center justify-between">
-                      {renderMiniHandCards(entry.hand)}
+                      {renderMiniHandCards(entry.combo ?? entry.hand)}
                       <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${entry.correct ? "bg-green-500" : "bg-red-500"}`} />
                     </div>
                   ))}
@@ -1315,14 +1352,14 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
               </div>
             )}
 
-            {phase === "question" && currentHand && (
+            {phase === "question" && currentHand && currentCombo && (
               <div className="flex flex-col items-center gap-6 w-full max-w-6xl">
                 {/* Big poker table with hero cards */}
                 <div className="w-full">
                   <PokerTable
                     positions={getPositions(selectedDrill.numPlayers)}
                     heroPosition={selectedDrill.heroPosition}
-                    heroHand={currentHand}
+                    heroHand={currentCombo}
                     foldedPositions={selectedDrill.foldedPositions}
                     betSizes={selectedDrill.betSizes}
                   />
