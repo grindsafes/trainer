@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Download, Upload, Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronUp, ChevronRight, Square, Sun, Moon, FolderPlus } from "lucide-react";
+import { Download, Upload, Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronUp, ChevronRight, Square, Sun, Moon, FolderPlus, Move, EllipsisVertical } from "lucide-react";
 import logoSvg from "./imgs/logo.svg";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { Popover, PopoverTrigger, PopoverContent } from "./components/ui/popover";
 
 
 // ─── Position constants ───────────────────────────────────────────────────────
@@ -639,9 +640,10 @@ interface BuilderProps {
   onNewRangeFolder: (parentId: string | null) => void;
   onRenameRangeFolder: (id: string, name: string) => void;
   onDeleteRangeFolder: (id: string) => void;
+  onMoveFolder: (folderId: string, newParentId: string | null) => void;
 }
 
-function Builder({ ranges, rangeFolders, onSaveRange, onDeleteRange, onMoveRange, onNewRangeFolder, onRenameRangeFolder, onDeleteRangeFolder }: BuilderProps) {
+function Builder({ ranges, rangeFolders, onSaveRange, onDeleteRange, onMoveRange, onNewRangeFolder, onRenameRangeFolder, onDeleteRangeFolder, onMoveFolder }: BuilderProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rangeName, setRangeName] = useState("New Range");
   const [grid, setGrid] = useState<Record<string, string>>({});
@@ -702,20 +704,20 @@ function Builder({ ranges, rangeFolders, onSaveRange, onDeleteRange, onMoveRange
             items={ranges}
             folders={rangeFolders}
             onMoveItem={onMoveRange}
+            onMoveFolder={onMoveFolder}
+            allFolders={rangeFolders}
             onDeleteFolder={onDeleteRangeFolder}
             onRenameFolder={onRenameRangeFolder}
             selectedItemId={editingId}
             onSelectItem={(item) => { const r = ranges.find((x) => x.id === item.id); if (r) loadRange(r); }}
+            onDeleteItem={(id) => { onDeleteRange(id); if (editingId === id) newRange(); }}
             renderItem={(item) => {
-              const isSelected = item.id === editingId;
+              const sel = item.id === editingId;
               return (
-                <div className={`group flex items-center justify-between py-2 rounded-md cursor-pointer transition-colors ${isSelected ? "bg-secondary text-foreground px-3" : "hover:bg-secondary"}`}>
+                <div className="flex items-center justify-between">
                   <div className="flex flex-col min-w-0">
-                    <span className={`text-xs font-medium truncate ${isSelected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
+                    <span className={`text-xs font-medium truncate ${sel ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
                     <span className="text-[9px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>RANGE</span>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0 ml-1">
-                    <button onClick={(e) => { e.stopPropagation(); onDeleteRange(item.id); if (editingId === item.id) newRange(); }} className="text-muted-foreground hover:text-destructive transition-all" title="Delete range"><Trash2 size={16} /></button>
                   </div>
                 </div>
               );
@@ -821,9 +823,10 @@ interface TrainerProps {
   onNewDrillFolder: (parentId: string | null) => void;
   onRenameDrillFolder: (id: string, name: string) => void;
   onDeleteDrillFolder: (id: string) => void;
+  onMoveFolder: (folderId: string, newParentId: string | null) => void;
 }
 
-function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onMoveDrill, onNewDrillFolder, onRenameDrillFolder, onDeleteDrillFolder }: TrainerProps) {
+function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onMoveDrill, onNewDrillFolder, onRenameDrillFolder, onDeleteDrillFolder, onMoveFolder }: TrainerProps) {
   const [view, setView] = useState<TrainerView>("drills");
   const [selectedDrillId, setSelectedDrillId] = useState<string | null>(null);
   const [editingDrill, setEditingDrill] = useState<Drill | undefined>(undefined);
@@ -1044,15 +1047,19 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
               items={drills}
               folders={drillFolders}
               onMoveItem={onMoveDrill}
+              onMoveFolder={onMoveFolder}
+              allFolders={drillFolders}
               onDeleteFolder={onDeleteDrillFolder}
               onRenameFolder={onRenameDrillFolder}
               selectedItemId={selectedDrillId}
               onSelectItem={(item) => { const d = drills.find((x) => x.id === item.id); if (d) selectDrill(d); }}
+              onEditItem={(id) => { const d = drills.find((x) => x.id === id); if (d) editDrill(d); }}
+              onDeleteItem={(id) => { onDeleteDrill(id); if (selectedDrillId === id) { setSelectedDrillId(null); setView("drills"); } }}
               renderItem={(item) => {
                 const d = drills.find((x) => x.id === item.id);
                 const active = item.id === selectedDrillId;
                 return (
-                  <div className={`group flex items-center justify-between py-2 rounded-md cursor-pointer transition-colors ${active ? "bg-secondary text-foreground px-3" : "hover:bg-secondary"}`}>
+                  <div className="flex items-center justify-between">
                     <div className="flex flex-col min-w-0">
                       <span className={`text-xs font-medium truncate ${active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
                       {d && (
@@ -1060,10 +1067,6 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
                           {d.numPlayers}p · {d.heroPosition}
                         </span>
                       )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0 ml-1">
-                      <button onClick={(e) => { e.stopPropagation(); if (d) editDrill(d); }} className="text-muted-foreground hover:text-foreground transition-all" title="Edit drill"><Pencil size={16} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); onDeleteDrill(item.id); if (selectedDrillId === item.id) { setSelectedDrillId(null); setView("drills"); } }} className="text-muted-foreground hover:text-destructive transition-all" title="Delete drill"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 );
@@ -1352,19 +1355,29 @@ function FolderTree({
   items,
   folders,
   onMoveItem,
+  onMoveFolder,
+  allFolders,
   onDeleteFolder,
   onRenameFolder,
   onSelectItem,
   renderItem,
+  onEditItem,
+  onDeleteItem,
+  selectedItemId,
   emptyMessage = "No items yet",
 }: {
   items: { id: string; name: string; folderId: string | null }[];
   folders: Folder[];
   onMoveItem: (itemId: string, toFolderId: string | null) => void;
+  onMoveFolder: (folderId: string, newParentId: string | null) => void;
+  allFolders: Folder[];
   onDeleteFolder: (folderId: string) => void;
   onRenameFolder: (folderId: string, name: string) => void;
   onSelectItem: (item: { id: string; name: string; folderId: string | null }) => void;
   renderItem: (item: { id: string; name: string; folderId: string | null }) => React.ReactNode;
+  onEditItem?: (itemId: string) => void;
+  onDeleteItem?: (itemId: string) => void;
+  selectedItemId?: string;
   emptyMessage?: string;
 }) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -1420,6 +1433,7 @@ function FolderTree({
           depth={0}
           items={items}
           folders={folders}
+          allFolders={allFolders}
           expandedFolders={expandedFolders}
           renamingId={renamingId}
           renameValue={renameValue}
@@ -1429,12 +1443,16 @@ function FolderTree({
           onCancelRename={() => setRenamingId(null)}
           onStartRename={(id, name) => { setRenamingId(id); setRenameValue(name); }}
           onMoveItem={onMoveItem}
+          onMoveFolder={onMoveFolder}
           onDeleteFolder={onDeleteFolder}
           onSelectItem={onSelectItem}
           renderItem={renderItem}
+          onEditItem={onEditItem}
+          onDeleteItem={onDeleteItem}
+          selectedItemId={selectedItemId}
         />
       ))}
-      <div ref={rootDropRef} className={`flex flex-col gap-1 rounded-sm ${isRootOver ? "bg-accent/50" : ""}`}>
+      <div ref={rootDropRef} className={`flex flex-col gap-1 rounded-sm ${isRootOver ? "bg-white/20" : ""}`}>
         {rootItems.map((item) => (
           <ItemNode
             key={item.id}
@@ -1442,6 +1460,11 @@ function FolderTree({
             depth={0}
             onSelectItem={onSelectItem}
             renderItem={renderItem}
+            onMoveItem={onMoveItem}
+            allFolders={allFolders}
+            onEditItem={onEditItem}
+            onDeleteItem={onDeleteItem}
+            selectedItemId={selectedItemId}
           />
         ))}
       </div>
@@ -1453,14 +1476,16 @@ function FolderTree({
 }
 
 function FolderNode({
-  folder, depth, items, folders, expandedFolders,
+  folder, depth, items, folders, allFolders, expandedFolders,
   renamingId, renameValue,
   onToggleFolder, onRenameChange, onCommitRename, onCancelRename, onStartRename,
-  onMoveItem, onDeleteFolder, onSelectItem, renderItem,
+  onMoveItem, onMoveFolder, onDeleteFolder, onSelectItem, renderItem,
+  onEditItem, onDeleteItem, selectedItemId,
 }: {
   folder: Folder; depth: number;
   items: { id: string; name: string; folderId: string | null }[];
   folders: Folder[];
+  allFolders: Folder[];
   expandedFolders: Set<string>;
   renamingId: string | null; renameValue: string;
   onToggleFolder: (id: string) => void;
@@ -1469,13 +1494,39 @@ function FolderNode({
   onCancelRename: () => void;
   onStartRename: (id: string, name: string) => void;
   onMoveItem: (itemId: string, toFolderId: string | null) => void;
+  onMoveFolder: (folderId: string, newParentId: string | null) => void;
   onDeleteFolder: (folderId: string) => void;
   onSelectItem: (item: { id: string; name: string; folderId: string | null }) => void;
   renderItem: (item: { id: string; name: string; folderId: string | null }) => React.ReactNode;
+  onEditItem?: (itemId: string) => void;
+  onDeleteItem?: (itemId: string) => void;
+  selectedItemId?: string;
 }) {
   const isExpanded = expandedFolders.has(folder.id);
   const childFolders = folders.filter((f) => f.parentId === folder.id);
   const childItems = items.filter((i) => i.folderId === folder.id);
+
+  const [movePopoverOpen, setMovePopoverOpen] = useState(false);
+
+  const descendantIds = useMemo(() => {
+    const ids = new Set<string>();
+    function collect(fid: string) {
+      allFolders.filter((f) => f.parentId === fid).forEach((f) => { ids.add(f.id); collect(f.id); });
+    }
+    collect(folder.id);
+    return ids;
+  }, [allFolders, folder.id]);
+
+  const availableDestinations = useMemo(() => {
+    return allFolders.filter((f) => f.id !== folder.id && !descendantIds.has(f.id));
+  }, [allFolders, folder.id, descendantIds]);
+
+  function getDepth(fid: string): number {
+    let d = 0;
+    let cur = allFolders.find((f) => f.id === fid);
+    while (cur && cur.parentId !== null) { d++; cur = allFolders.find((f) => f.id === cur!.parentId); }
+    return d;
+  }
 
   const [{ isOver }, dropRef] = useDrop(() => ({
     accept: DND_ITEM,
@@ -1484,7 +1535,7 @@ function FolderNode({
   }), [folder.id, items, folders]);
 
   return (
-    <div ref={dropRef} className={`transition-colors rounded-sm ${isOver ? "bg-accent/50" : ""}`}>
+    <div ref={dropRef} className={`transition-colors rounded-sm ${isOver ? "bg-white/20" : ""}`}>
       <div
         className="flex items-center gap-1 py-2 rounded-md hover:bg-secondary cursor-pointer group"
         style={{ paddingLeft: `${depth * 16}px` }}
@@ -1507,20 +1558,54 @@ function FolderNode({
             <span className="text-[9px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>FOLDER</span>
           </div>
         )}
-        <button
-          onClick={(e) => { e.stopPropagation(); onStartRename(folder.id, folder.name); }}
-          className="text-muted-foreground hover:text-foreground transition-all flex-shrink-0"
-          title="Rename folder"
-        >
-          <Pencil size={16} />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder.id); }}
-          className="text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
-          title="Delete folder"
-        >
-          <Trash2 size={16} />
-        </button>
+        <Popover open={movePopoverOpen} onOpenChange={setMovePopoverOpen}>
+          <PopoverTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="text-muted-foreground hover:text-foreground transition-all flex-shrink-0"
+              title="Options"
+            >
+              <EllipsisVertical size={14} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-56 p-1.5" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider px-2 py-1">Move to...</p>
+            <button
+              onClick={() => { onMoveFolder(folder.id, null); setMovePopoverOpen(false); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded hover:bg-secondary transition-colors"
+            >
+              <Move size={12} className="text-muted-foreground flex-shrink-0" />
+              <span>Root (unfiled)</span>
+            </button>
+            {availableDestinations.length > 0 && <div className="h-px bg-border my-1" />}
+            {availableDestinations.map((dest) => (
+              <button
+                key={dest.id}
+                onClick={() => { onMoveFolder(folder.id, dest.id); setMovePopoverOpen(false); }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded hover:bg-secondary transition-colors"
+                style={{ paddingLeft: `${8 + getDepth(dest.id) * 12}px` }}
+              >
+                <ChevronRight size={10} className="text-muted-foreground flex-shrink-0" />
+                <span className="truncate">{dest.name}</span>
+              </button>
+            ))}
+            <div className="h-px bg-border my-1" />
+            <button
+              onClick={(e) => { e.stopPropagation(); onStartRename(folder.id, folder.name); setMovePopoverOpen(false); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded hover:bg-secondary transition-colors"
+            >
+              <Pencil size={12} className="text-muted-foreground flex-shrink-0" />
+              <span>Rename</span>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder.id); setMovePopoverOpen(false); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded hover:bg-secondary transition-colors"
+            >
+              <Trash2 size={12} className="text-muted-foreground flex-shrink-0" />
+              <span>Delete</span>
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
       {isExpanded && (
         <div>
@@ -1531,6 +1616,7 @@ function FolderNode({
               depth={depth + 1}
               items={items}
               folders={folders}
+              allFolders={allFolders}
               expandedFolders={expandedFolders}
               renamingId={renamingId}
               renameValue={renameValue}
@@ -1540,9 +1626,13 @@ function FolderNode({
               onCancelRename={onCancelRename}
               onStartRename={onStartRename}
               onMoveItem={onMoveItem}
+              onMoveFolder={onMoveFolder}
               onDeleteFolder={onDeleteFolder}
               onSelectItem={onSelectItem}
               renderItem={renderItem}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
+              selectedItemId={selectedItemId}
             />
           ))}
           {childItems.map((item) => (
@@ -1552,6 +1642,11 @@ function FolderNode({
               depth={depth + 1}
               onSelectItem={onSelectItem}
               renderItem={renderItem}
+              onMoveItem={onMoveItem}
+              allFolders={allFolders}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
+              selectedItemId={selectedItemId}
             />
           ))}
           {childFolders.length === 0 && childItems.length === 0 && (
@@ -1564,12 +1659,18 @@ function FolderNode({
 }
 
 function ItemNode({
-  item, depth, onSelectItem, renderItem,
+  item, depth, onSelectItem, renderItem, onMoveItem, allFolders,
+  onEditItem, onDeleteItem, selectedItemId,
 }: {
   item: { id: string; name: string; folderId: string | null };
   depth: number;
   onSelectItem: (item: { id: string; name: string; folderId: string | null }) => void;
   renderItem: (item: { id: string; name: string; folderId: string | null }) => React.ReactNode;
+  onMoveItem: (itemId: string, toFolderId: string | null) => void;
+  allFolders: Folder[];
+  onEditItem?: (itemId: string) => void;
+  onDeleteItem?: (itemId: string) => void;
+  selectedItemId?: string;
 }) {
   const [{ isDragging }, dragRef] = useDrag(() => ({
     type: DND_ITEM,
@@ -1577,14 +1678,78 @@ function ItemNode({
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
   }), [item.id]);
 
+  const [movePopoverOpen, setMovePopoverOpen] = useState(false);
+  const isSelected = selectedItemId === item.id;
+
+  function getDepth(fid: string): number {
+    let d = 0;
+    let cur = allFolders.find((f) => f.id === fid);
+    while (cur && cur.parentId !== null) { d++; cur = allFolders.find((f) => f.id === cur!.parentId); }
+    return d;
+  }
+
   return (
     <div
       ref={dragRef}
-      className={`transition-opacity ${isDragging ? "opacity-40" : ""}`}
+      className={`flex items-center py-2 rounded-md cursor-pointer transition-colors group ${isSelected ? "bg-secondary text-foreground pr-3" : "hover:bg-secondary"} ${isDragging ? "opacity-40" : ""}`}
       style={{ paddingLeft: `${depth * 16}px` }}
       onClick={() => onSelectItem(item)}
     >
-      {renderItem(item)}
+      <div className="flex-1 min-w-0">
+        {renderItem(item)}
+      </div>
+      <Popover open={movePopoverOpen} onOpenChange={setMovePopoverOpen}>
+        <PopoverTrigger asChild>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="text-muted-foreground hover:text-foreground transition-all flex-shrink-0"
+            title="Options"
+          >
+            <EllipsisVertical size={14} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-56 p-1.5" onClick={(e) => e.stopPropagation()}>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider px-2 py-1">Move to...</p>
+          <button
+            onClick={() => { onMoveItem(item.id, null); setMovePopoverOpen(false); }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded hover:bg-secondary transition-colors"
+          >
+            <Move size={12} className="text-muted-foreground flex-shrink-0" />
+            <span>Root (unfiled)</span>
+          </button>
+          {allFolders.length > 0 && <div className="h-px bg-border my-1" />}
+          {allFolders.map((dest) => (
+            <button
+              key={dest.id}
+              onClick={() => { onMoveItem(item.id, dest.id); setMovePopoverOpen(false); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded hover:bg-secondary transition-colors"
+              style={{ paddingLeft: `${8 + getDepth(dest.id) * 12}px` }}
+            >
+              <ChevronRight size={10} className="text-muted-foreground flex-shrink-0" />
+              <span className="truncate">{dest.name}</span>
+            </button>
+          ))}
+          {(onEditItem || onDeleteItem) && <div className="h-px bg-border my-1" />}
+          {onEditItem && (
+            <button
+              onClick={() => { onEditItem(item.id); setMovePopoverOpen(false); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded hover:bg-secondary transition-colors"
+            >
+              <Pencil size={12} className="text-muted-foreground flex-shrink-0" />
+              <span>Edit</span>
+            </button>
+          )}
+          {onDeleteItem && (
+            <button
+              onClick={() => { onDeleteItem(item.id); setMovePopoverOpen(false); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded hover:bg-secondary transition-colors"
+            >
+              <Trash2 size={12} className="text-muted-foreground flex-shrink-0" />
+              <span>Delete</span>
+            </button>
+          )}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
@@ -1661,6 +1826,14 @@ export default function App() {
 
   function moveDrill(id: string, folderId: string | null) {
     setDrills((prev) => prev.map((d) => d.id === id ? { ...d, folderId } : d));
+  }
+
+  function moveRangeFolder(id: string, newParentId: string | null) {
+    setRangeFolders((prev) => prev.map((f) => f.id === id ? { ...f, parentId: newParentId } : f));
+  }
+
+  function moveDrillFolder(id: string, newParentId: string | null) {
+    setDrillFolders((prev) => prev.map((f) => f.id === id ? { ...f, parentId: newParentId } : f));
   }
 
   function newRangeFolder(parentId: string | null) {
@@ -1767,9 +1940,9 @@ export default function App() {
 
         <main className="flex-1 overflow-hidden p-5">
           {tab === "builder" ? (
-            <Builder ranges={ranges} rangeFolders={rangeFolders} onSaveRange={saveRange} onDeleteRange={deleteRange} onMoveRange={moveRange} onNewRangeFolder={newRangeFolder} onRenameRangeFolder={renameRangeFolder} onDeleteRangeFolder={deleteRangeFolder} />
+            <Builder ranges={ranges} rangeFolders={rangeFolders} onSaveRange={saveRange} onDeleteRange={deleteRange} onMoveRange={moveRange} onMoveFolder={moveRangeFolder} onNewRangeFolder={newRangeFolder} onRenameRangeFolder={renameRangeFolder} onDeleteRangeFolder={deleteRangeFolder} />
           ) : (
-            <Trainer ranges={ranges} drills={drills} drillFolders={drillFolders} onSaveDrill={saveDrill} onDeleteDrill={deleteDrill} onMoveDrill={moveDrill} onNewDrillFolder={newDrillFolder} onRenameDrillFolder={renameDrillFolder} onDeleteDrillFolder={deleteDrillFolder} />
+            <Trainer ranges={ranges} drills={drills} drillFolders={drillFolders} onSaveDrill={saveDrill} onDeleteDrill={deleteDrill} onMoveDrill={moveDrill} onMoveFolder={moveDrillFolder} onNewDrillFolder={newDrillFolder} onRenameDrillFolder={renameDrillFolder} onDeleteDrillFolder={deleteDrillFolder} />
           )}
         </main>
       </div>
