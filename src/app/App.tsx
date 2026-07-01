@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Upload, Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronUp, Square } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Download, Upload, Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronUp, Square, Sun, Moon } from "lucide-react";
 
 
 // ─── Position constants ───────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
     const isPair = hand.length === 2;
     const isSuited = hand.endsWith("s");
     const suits = isPair ? ["♠", "♥"] : isSuited ? ["♠", "♠"] : ["♠", "♥"];
-    const suitColors = ["#e8eaed", "#ef4444"];
+    const suitColors = ["var(--card-foreground)", "#ef4444"];
     const cw = 22, ch = 32, gap = 2;
     const startX = cx - cw - gap / 2;
 
@@ -58,7 +59,7 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
       <>
         {[0, 1].map((i) => (
           <g key={i}>
-            <rect x={startX + i * (cw + gap)} y={cy - ch / 2} width={cw} height={ch} rx={3} fill="#1a1e24" stroke="#e8eaed" strokeWidth={1} />
+            <rect x={startX + i * (cw + gap)} y={cy - ch / 2} width={cw} height={ch} rx={3} style={{ fill: "var(--card)", stroke: "var(--border)" }} strokeWidth={1} />
             <text x={startX + i * (cw + gap) + cw / 2} y={cy - 3} textAnchor="middle" dominantBaseline="middle" fill={suitColors[i]} fontSize={10} fontWeight={700} fontFamily="JetBrains Mono, monospace">
               {hand[i]}
             </text>
@@ -126,10 +127,10 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
                 {/* Chip */}
                 <circle
                   cx={x} cy={y} r={r}
-                  fill={isHero ? "#0f3d1e" : "#1a1e24"}
+                  style={{ fill: isHero ? "var(--accent)" : "var(--secondary)" }}
                   stroke={
-                    isHero ? "#22c55e" :
-                    isFolded ? "#4b5563" : "#374151"
+                    isHero ? "var(--primary)" :
+                    isFolded ? "var(--muted-foreground)" : "var(--border)"
                   }
                   strokeWidth={isHero ? 2.5 : 1.5}
                 />
@@ -137,7 +138,7 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
                 <text
                   x={x} y={y}
                   textAnchor="middle" dominantBaseline="middle"
-                  fill={isHero ? "#22c55e" : isFolded ? "#4b5563" : "#9ca3af"}
+                  style={{ fill: isHero ? "var(--primary)" : "var(--muted-foreground)" }}
                   fontSize={compact ? 7 : 9}
                   fontWeight={700}
                   fontFamily="JetBrains Mono, monospace"
@@ -159,7 +160,7 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
                   <text
                     x={x} y={y + 11}
                     textAnchor="middle" dominantBaseline="middle"
-                    fill="#6b7280" fontSize={5.5}
+                    fill="var(--muted-foreground)" fontSize={5.5}
                     fontFamily="Inter, sans-serif"
                     letterSpacing={0.5}
                   >
@@ -171,13 +172,12 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
             {/* Bet size chip on the felt */}
             {betSize && !compact && (
               <>
-                {/* Chip position: inset from seat toward center */}
                 <circle
                   cx={T_CX + (x - T_CX) * 0.72}
                   cy={T_CY + (y - T_CY) * 0.72}
                   r={5.5}
-                  fill="#e8eaed"
-                  stroke={isFolded ? "#4b5563" : "#1a5c35"}
+                  style={{ fill: isFolded ? "var(--muted)" : "var(--card)" }}
+                  stroke={isFolded ? "var(--muted-foreground)" : "#1a5c35"}
                   strokeWidth={1.5}
                 />
                 <circle
@@ -185,20 +185,20 @@ function PokerTable({ positions, heroPosition, onSelectHero, compact = false, he
                   cy={T_CY + (y - T_CY) * 0.72}
                   r={3.5}
                   fill="none"
-                  stroke={isFolded ? "#4b5563" : "#1a5c35"}
+                  stroke={isFolded ? "var(--muted-foreground)" : "#1a5c35"}
                   strokeWidth={0.8}
                 />
                 <circle
                   cx={T_CX + (x - T_CX) * 0.72}
                   cy={T_CY + (y - T_CY) * 0.72}
                   r={1.2}
-                  fill={isFolded ? "#4b5563" : "#1a5c35"}
+                  fill={isFolded ? "var(--muted-foreground)" : "#1a5c35"}
                 />
                 <text
                   x={T_CX + (x - T_CX) * 0.72 + 9}
                   y={T_CY + (y - T_CY) * 0.72 + 0.5}
                   textAnchor="start" dominantBaseline="middle"
-                  fill={isFolded ? "#4b5563" : "#e8eaed"}
+                  style={{ fill: isFolded ? "var(--muted-foreground)" : "var(--card-foreground)" }}
                   fontSize={6.5}
                   fontWeight={600}
                   fontFamily="JetBrains Mono, monospace"
@@ -326,10 +326,10 @@ function DrillEditor({ initial, ranges, onSave, onCancel }: DrillEditorProps) {
               onClick={() => setNumPlayers(n)}
               className="w-10 h-10 rounded-md border text-sm font-semibold transition-all"
               style={{
-                backgroundColor: numPlayers === n ? "#14532d" : "transparent",
-                borderColor: numPlayers === n ? "#22c55e" : "#374151",
-                color: numPlayers === n ? "#22c55e" : "#6b7280",
-                boxShadow: numPlayers === n ? "0 0 8px #22c55e30" : undefined,
+                backgroundColor: numPlayers === n ? "var(--accent)" : "transparent",
+                borderColor: numPlayers === n ? "var(--primary)" : "var(--border)",
+                color: numPlayers === n ? "var(--accent-foreground)" : "var(--muted-foreground)",
+                boxShadow: numPlayers === n ? "0 0 8px var(--primary)" : undefined,
               }}
             >
               {n}
@@ -356,7 +356,7 @@ function DrillEditor({ initial, ranges, onSave, onCancel }: DrillEditorProps) {
           />
         </div>
         <p className="text-xs text-muted-foreground text-center">
-          Hero is <span style={{ color: "#22c55e", fontWeight: 600 }}>{heroPosition}</span> — always shown at center bottom during training
+          Hero is <span style={{ color: "var(--primary)", fontWeight: 600 }}>{heroPosition}</span> — always shown at center bottom during training
         </p>
       </div>
 
@@ -447,23 +447,40 @@ interface ActionDef {
 }
 
 const DEFAULT_ACTIONS: ActionDef[] = [
-  { id: "raise",  label: "Raise",   color: "#22c55e", bg: "#14532d", border: "#16a34a" },
-  { id: "3bet",   label: "3-Bet",   color: "#60a5fa", bg: "#1e3a5f", border: "#3b82f6" },
-  { id: "call",   label: "Call",    color: "#fbbf24", bg: "#422006", border: "#d97706" },
-  { id: "limp",   label: "Limp",    color: "#c084fc", bg: "#3b0764", border: "#9333ea" },
-  { id: "fold",   label: "Fold",    color: "#6b7280", bg: "#111418", border: "#374151" },
-  { id: "allin",  label: "All-In",  color: "#f87171", bg: "#450a0a", border: "#ef4444" },
+  { id: "raise",  label: "Raise",   color: "#16a34a", bg: "#dcfce7", border: "#86efac" },
+  { id: "3bet",   label: "3-Bet",   color: "#2563eb", bg: "#dbeafe", border: "#93c5fd" },
+  { id: "call",   label: "Call",    color: "#ca8a04", bg: "#fef9c3", border: "#fde047" },
+  { id: "limp",   label: "Limp",    color: "#9333ea", bg: "#f3e8ff", border: "#d8b4fe" },
+  { id: "fold",   label: "Fold",    color: "#6b7280", bg: "#f3f4f6", border: "#d1d5db" },
+  { id: "allin",  label: "All-In",  color: "#dc2626", bg: "#fee2e2", border: "#fca5a5" },
 ];
 
+const DEFAULT_ACTION_IDS = new Set(DEFAULT_ACTIONS.map((a) => a.id));
+
+function getActionStyle(a: ActionDef) {
+  if (DEFAULT_ACTION_IDS.has(a.id)) {
+    return {
+      backgroundColor: `var(--action-${a.id}-bg, ${a.bg})`,
+      borderColor: `var(--action-${a.id}-border, ${a.border})`,
+      color: `var(--action-${a.id}-c, ${a.color})`,
+    };
+  }
+  return {
+    backgroundColor: a.bg,
+    borderColor: a.border,
+    color: a.color,
+  };
+}
+
 const COLOR_PRESETS = [
-  { color: "#22c55e", bg: "#14532d", border: "#16a34a" },
-  { color: "#60a5fa", bg: "#1e3a5f", border: "#3b82f6" },
-  { color: "#fbbf24", bg: "#422006", border: "#d97706" },
-  { color: "#c084fc", bg: "#3b0764", border: "#9333ea" },
-  { color: "#f87171", bg: "#450a0a", border: "#ef4444" },
-  { color: "#34d399", bg: "#064e3b", border: "#10b981" },
-  { color: "#fb923c", bg: "#431407", border: "#ea580c" },
-  { color: "#e879f9", bg: "#4a044e", border: "#d946ef" },
+  { color: "#16a34a", bg: "#dcfce7", border: "#86efac" },
+  { color: "#2563eb", bg: "#dbeafe", border: "#93c5fd" },
+  { color: "#ca8a04", bg: "#fef9c3", border: "#fde047" },
+  { color: "#9333ea", bg: "#f3e8ff", border: "#d8b4fe" },
+  { color: "#dc2626", bg: "#fee2e2", border: "#fca5a5" },
+  { color: "#059669", bg: "#d1fae5", border: "#6ee7b7" },
+  { color: "#ea580c", bg: "#ffedd5", border: "#fdba74" },
+  { color: "#c026d3", bg: "#fae8ff", border: "#f0abfc" },
 ];
 
 interface Range {
@@ -517,17 +534,17 @@ function RangeGrid({
           const action = actionId ? actionMap[actionId] : null;
           const isPair = row === col;
           const isHighlight = highlightHand === hand;
-          let cellBg = "#1a1e24", cellBorder = "#252a32", textColor = "#4b5563";
-          if (action) { cellBg = action.bg; cellBorder = action.border; textColor = action.color; }
-          else if (isPair) { cellBg = "#1e2228"; cellBorder = "#374151"; textColor = "#9ca3af"; }
-          if (isHighlight) { cellBorder = "#ffffff"; cellBg = action ? action.bg : "#2a2e38"; }
+          let cellBg = "var(--muted)", cellBorder = "var(--border)", textColor = "var(--muted-foreground)";
+          if (action) { const s = getActionStyle(action); cellBg = s.backgroundColor; cellBorder = s.borderColor; textColor = s.color; }
+          else if (isPair) { cellBg = "var(--secondary)"; cellBorder = "var(--border)"; textColor = "var(--muted-foreground)"; }
+          if (isHighlight) { cellBorder = "var(--ring)"; cellBg = action ? cellBg : "var(--accent)"; }
           return (
             <div
               key={hand}
               title={action ? `${hand} → ${action.label}` : hand}
               onMouseDown={() => handleMouseDown(hand)}
               onMouseEnter={() => handleMouseEnter(hand)}
-              style={{ backgroundColor: cellBg, border: `1px solid ${cellBorder}`, color: textColor, boxShadow: isHighlight ? `0 0 0 2px #fff, 0 0 12px rgba(255,255,255,0.3)` : undefined }}
+              style={{ backgroundColor: cellBg, border: `1px solid ${cellBorder}`, color: textColor, boxShadow: isHighlight ? `0 0 0 2px var(--ring), 0 0 12px color-mix(in srgb, var(--ring) 50%, transparent)` : undefined }}
               className="aspect-square flex items-center justify-center cursor-pointer rounded-[2px] transition-all duration-75 hover:brightness-125"
             >
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "clamp(5px, 0.9vw, 10px)", fontWeight: 600, lineHeight: 1 }}>
@@ -674,11 +691,14 @@ function Builder({ ranges, actions, onSaveRange, onDeleteRange, onActionsChange 
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          {actions.map((a) => (
-            <button key={a.id} onClick={() => setSelectedAction(a.id)} style={{ backgroundColor: selectedAction === a.id ? a.bg : "transparent", borderColor: a.border, color: a.color, boxShadow: selectedAction === a.id ? `0 0 8px ${a.color}40` : undefined }} className="px-3 py-1.5 rounded-md border text-xs font-semibold transition-all whitespace-nowrap">
-              {a.label}
-            </button>
-          ))}
+          {actions.map((a) => {
+            const aStyle = getActionStyle(a);
+            return (
+              <button key={a.id} onClick={() => setSelectedAction(a.id)} style={{ backgroundColor: selectedAction === a.id ? aStyle.backgroundColor : "transparent", borderColor: selectedAction === a.id ? aStyle.borderColor : "var(--border)", color: selectedAction === a.id ? aStyle.color : "var(--muted-foreground)", boxShadow: selectedAction === a.id ? `0 0 8px ${aStyle.color}40` : undefined }} className="px-3 py-1.5 rounded-md border text-xs font-semibold transition-all whitespace-nowrap">
+                {a.label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex-1 flex gap-5 min-h-0">
@@ -807,12 +827,12 @@ function Trainer({ ranges, actions, drills, onSaveDrill, onDeleteDrill }: Traine
     const isPair = hand.length === 2;
     const isSuited = hand.endsWith("s");
     const suits = isPair ? ["♠", "♥"] : isSuited ? ["♠", "♠"] : ["♠", "♥"];
-    const suitColors = ["#e8eaed", "#ef4444"];
+    const suitColors = ["var(--card-foreground)", "#ef4444"];
     return (
       <div className="flex gap-3 justify-center">
         {[hand[0], hand[1]].map((rank, i) => (
-          <div key={i} className="rounded-xl border border-border flex flex-col items-center justify-center" style={{ width: 72, height: 96, backgroundColor: "#1a1e24", boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 32, fontWeight: 700, color: "#e8eaed", lineHeight: 1 }}>{rank}</span>
+          <div key={i} className="rounded-xl border border-border flex flex-col items-center justify-center" style={{ width: 72, height: 96, backgroundColor: "var(--card)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 32, fontWeight: 700, color: "var(--card-foreground)", lineHeight: 1 }}>{rank}</span>
             <span style={{ fontSize: 22, color: suitColors[i], lineHeight: 1, marginTop: 4 }}>{suits[i]}</span>
           </div>
         ))}
@@ -921,7 +941,7 @@ function Trainer({ ranges, actions, drills, onSaveDrill, onDeleteDrill }: Traine
         {/* No drill selected — show overview */}
         {view === "drills" && (
           <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
-            <div className="w-16 h-16 rounded-full border-2 border-primary/30 flex items-center justify-center" style={{ backgroundColor: "#1a2e1f" }}>
+            <div className="w-16 h-16 rounded-full border-2 border-primary/30 flex items-center justify-center" style={{ backgroundColor: "var(--accent)" }}>
               <span style={{ fontSize: 28 }}>🃏</span>
             </div>
             <div>
@@ -985,7 +1005,7 @@ function Trainer({ ranges, actions, drills, onSaveDrill, onDeleteDrill }: Traine
                   <div className="grid grid-cols-3 gap-3 max-w-lg w-full">
                     {rangeActions.map((a) => (
                       <button key={a.id} onClick={() => answer(a.id)} disabled={userAnswer !== null}
-                        style={{ backgroundColor: a.bg, borderColor: a.border, color: a.color }}
+                        style={getActionStyle(a)}
                         className="py-3 rounded-md border font-semibold text-sm hover:brightness-125 transition-all active:scale-95 truncate px-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:brightness-75">
                         {a.label}
                       </button>
@@ -1019,6 +1039,7 @@ function saveToStorage(data: AppData) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const { theme, setTheme } = useTheme();
   const saved = useRef(loadFromStorage()).current;
   const [tab, setTab] = useState<"builder" | "trainer">("builder");
   const [ranges, setRanges] = useState<Range[]>(saved.ranges ?? []);
@@ -1075,7 +1096,7 @@ export default function App() {
     <div className="w-full h-screen flex flex-col overflow-hidden bg-background text-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
       <header className="flex-shrink-0 border-b border-border px-6 py-3 flex items-center gap-6">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md flex items-center justify-center text-sm" style={{ backgroundColor: "#14532d", border: "1px solid #16a34a" }}>♠</div>
+          <div className="w-7 h-7 rounded-md flex items-center justify-center text-sm" style={{ backgroundColor: "var(--primary)", border: "1px solid var(--primary)" }}>♠</div>
           <span className="font-semibold text-foreground text-sm tracking-tight">GrindSafe Trainer</span>
         </div>
         <nav className="flex gap-1">
@@ -1087,6 +1108,13 @@ export default function App() {
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs text-muted-foreground mr-2">{ranges.length} range{ranges.length !== 1 ? "s" : ""} · {drills.length} drill{drills.length !== 1 ? "s" : ""}</span>
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+          >
+            {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+          </button>
           <button onClick={exportData} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">
             <Download size={13} /> Export
           </button>
