@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
 import { Download, Upload, Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronUp, Square, Sun, Moon } from "lucide-react";
 
 
@@ -818,6 +819,12 @@ function Trainer({ ranges, actions, drills, onSaveDrill, onDeleteDrill }: Traine
     const correct = selectedRange.grid[currentHand];
     const isCorrect = actionId === correct;
     setUserAnswer(actionId);
+    setRevealGrid(true);
+    if (isCorrect) {
+      toast("Correct", { icon: <Check size={18} className="text-green-500" /> });
+    } else {
+      toast(`Incorrect — ${correctAction?.label ?? correctActionId}`, { icon: <X size={18} className="text-red-500" /> });
+    }
     setHistory((prev) => [{ hand: currentHand, correct: isCorrect }, ...prev]);
     setStats((prev) => ({ correct: prev.correct + (isCorrect ? 1 : 0), total: prev.total + 1 }));
     setTimeout(() => nextHand(selectedRange), 1500);
@@ -840,10 +847,27 @@ function Trainer({ ranges, actions, drills, onSaveDrill, onDeleteDrill }: Traine
     );
   }
 
+  function renderMiniHandCards(hand: string) {
+    const isPair = hand.length === 2;
+    const isSuited = hand.endsWith("s");
+    const suits = isPair ? ["♠", "♥"] : isSuited ? ["♠", "♠"] : ["♠", "♥"];
+    const suitColors = ["var(--card-foreground)", "#ef4444"];
+    return (
+      <div className="flex gap-0.5">
+        {[hand[0], hand[1]].map((rank, i) => (
+          <div key={i} className="rounded border border-border flex flex-col items-center justify-center" style={{ width: 36, height: 48, backgroundColor: "var(--card)" }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: "var(--card-foreground)", lineHeight: 1 }}>{rank}</span>
+            <span style={{ fontSize: 11, color: suitColors[i], lineHeight: 1 }}>{suits[i]}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-5 h-full">
       {/* ── Sidebar ── */}
-      <aside className="w-56 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
+      <aside className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto border-r border-border pr-4">
         {/* Drills section */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -906,9 +930,9 @@ function Trainer({ ranges, actions, drills, onSaveDrill, onDeleteDrill }: Traine
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">History</span>
                 <div className="flex flex-col gap-1 max-h-40 overflow-y-auto pr-1">
                   {history.map((entry, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
+                    <div key={i} className="flex items-center justify-between">
+                      {renderMiniHandCards(entry.hand)}
                       <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${entry.correct ? "bg-green-500" : "bg-red-500"}`} />
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace" }} className="text-foreground font-medium">{entry.hand}</span>
                     </div>
                   ))}
                 </div>
@@ -1098,6 +1122,7 @@ export default function App() {
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md flex items-center justify-center text-sm" style={{ backgroundColor: "var(--primary)", border: "1px solid var(--primary)" }}>♠</div>
           <span className="font-semibold text-foreground text-sm tracking-tight">GrindSafe Trainer</span>
+          <a href="https://github.com/grindsafes/preflop-trainer" target="_blank" rel="noopener noreferrer"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/grindsafes/preflop-trainer" className="h-5" /></a>
         </div>
         <nav className="flex gap-1">
           {(["builder", "trainer"] as const).map((t) => (
