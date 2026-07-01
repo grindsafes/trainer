@@ -688,16 +688,17 @@ function Builder({ ranges, rangeFolders, onSaveRange, onDeleteRange, onMoveRange
 
   return (
     <div className="flex gap-5 h-full">
-      <aside className="w-52 flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
-        <button onClick={newRange} className="w-full text-sm font-semibold py-2 px-3 rounded-full border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors flex-shrink-0">
-          + New Range
-        </button>
-        <div className="flex items-center justify-between flex-shrink-0">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Folders</span>
-          <button onClick={() => onNewRangeFolder(null)} className="text-muted-foreground hover:text-primary transition-colors"><FolderPlus size={12} /></button>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <FolderTree
+      <aside className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto border-r border-border pr-4">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ranges</span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => onNewRangeFolder(null)} className="text-muted-foreground hover:text-primary transition-colors" title="New folder"><FolderPlus size={12} /></button>
+              <button onClick={newRange} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"><Plus size={11} /> New</button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <FolderTree
             items={ranges}
             folders={rangeFolders}
             onMoveItem={onMoveRange}
@@ -708,13 +709,14 @@ function Builder({ ranges, rangeFolders, onSaveRange, onDeleteRange, onMoveRange
             renderItem={(item) => {
               const isSelected = item.id === editingId;
               return (
-                <div className={`group flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors text-xs ${isSelected ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
+                <div className={`group flex items-center justify-between py-2 rounded-md cursor-pointer transition-colors text-xs ${isSelected ? "bg-accent text-accent-foreground px-3" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
                   <span className="truncate font-medium">{item.name}</span>
                   <button onClick={(e) => { e.stopPropagation(); onDeleteRange(item.id); if (editingId === item.id) newRange(); }} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"><X size={10} /></button>
                 </div>
               );
             }}
           />
+        </div>
         </div>
       </aside>
 
@@ -1045,7 +1047,7 @@ function Trainer({ ranges, drills, drillFolders, onSaveDrill, onDeleteDrill, onM
                 const d = drills.find((x) => x.id === item.id);
                 const active = item.id === selectedDrillId;
                 return (
-                  <div className={`group flex items-start justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${active ? "bg-accent" : "hover:bg-secondary"}`}>
+                  <div className={`group flex items-start justify-between py-2 rounded-md cursor-pointer transition-colors ${active ? "bg-accent px-3" : "hover:bg-secondary"}`}>
                     <div className="flex flex-col min-w-0">
                       <span className={`text-xs font-medium truncate ${active ? "text-accent-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
                       {d && (
@@ -1479,8 +1481,8 @@ function FolderNode({
   return (
     <div ref={dropRef} className={`transition-colors rounded-sm ${isOver ? "bg-accent/50" : ""}`}>
       <div
-        className="flex items-center gap-1 px-1 py-1 rounded-sm hover:bg-secondary cursor-pointer group"
-        style={{ paddingLeft: `${8 + depth * 16}px` }}
+        className="flex items-center gap-1 py-1 rounded-sm hover:bg-secondary cursor-pointer group"
+        style={{ paddingLeft: `${depth * 16}px` }}
         onClick={() => onToggleFolder(folder.id)}
       >
         {isExpanded ? <ChevronDown size={12} className="text-muted-foreground flex-shrink-0" /> : <ChevronRight size={12} className="text-muted-foreground flex-shrink-0" />}
@@ -1545,7 +1547,7 @@ function FolderNode({
             />
           ))}
           {childFolders.length === 0 && childItems.length === 0 && (
-            <div style={{ paddingLeft: `${16 + (depth + 1) * 16}px` }} className="text-[10px] text-muted-foreground py-1">Empty folder</div>
+            <div style={{ paddingLeft: `${(depth + 1) * 16}px` }} className="text-[10px] text-muted-foreground py-1">Empty folder</div>
           )}
         </div>
       )}
@@ -1571,7 +1573,7 @@ function ItemNode({
     <div
       ref={dragRef}
       className={`transition-opacity ${isDragging ? "opacity-40" : ""}`}
-      style={{ paddingLeft: `${8 + depth * 16}px` }}
+      style={{ paddingLeft: `${depth * 16}px` }}
       onClick={() => onSelectItem(item)}
     >
       {renderItem(item)}
@@ -1727,7 +1729,6 @@ export default function App() {
         <header className="flex-shrink-0 border-b border-border px-6 py-3 flex items-center gap-6">
             <div className="flex items-center gap-2.5">
               <img src={logoSvg as string} alt="GrindSafe Trainer" className="h-[22px]" />
-              <a href="https://github.com/grindsafes/preflop-trainer" target="_blank" rel="noopener noreferrer"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/grindsafes/preflop-trainer" className="h-5" /></a>
           </div>
           <nav className="flex gap-1">
             {(["builder", "trainer"] as const).map((t) => (
@@ -1752,6 +1753,7 @@ export default function App() {
               <Upload size={13} /> Import
             </button>
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={importData} />
+            <a href="https://github.com/grindsafes/preflop-trainer" target="_blank" rel="noopener noreferrer"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/grindsafes/preflop-trainer" className="h-5" /></a>
           </div>
         </header>
 
