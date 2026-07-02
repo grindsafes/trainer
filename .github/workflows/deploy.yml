@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -26,11 +24,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: cp dist/index.html dist/404.html
-      - name: Prepare GitHub Pages artifacts
-        run: |
-          touch dist/.nojekyll
-          echo trainer.grindsafe.app > dist/CNAME
-      - uses: actions/upload-pages-artifact@v5
+      - uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-      - uses: actions/deploy-pages@v5
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          enable_jekyll: false
+          cname: trainer.grindsafe.app
