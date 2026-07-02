@@ -6,6 +6,7 @@ import logoSvg from "./imgs/logo.svg";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Popover, PopoverTrigger, PopoverContent } from "./components/ui/popover";
+import Community from "./pages/Community";
 
 
 // ─── Position constants ───────────────────────────────────────────────────────
@@ -739,7 +740,7 @@ function ActionChip({
   );
 }
 
-// ─── Range Builder ────────────────────────────────────────────────────────────
+// ─── Charts ────────────────────────────────────────────────────────────
 
 interface BuilderProps {
   ranges: Range[];
@@ -1930,10 +1931,11 @@ function saveSessions(sessions: SessionData[]) {
 export default function App() {
   const { theme, setTheme } = useTheme();
   const saved = useRef(loadFromStorage()).current;
-  const [tab, setTab] = useState<"builder" | "trainer">("builder");
+  const [tab, setTab] = useState<"community" | "builder" | "trainer">("community");
 
   useEffect(() => {
-    document.title = `${tab === "builder" ? "Range Builder" : "Trainer"} - GrindSafe Trainer`;
+    const titles: Record<string, string> = { community: "Community", builder: "Charts", trainer: "Trainer" };
+    document.title = `${titles[tab] ?? "GrindSafe"} - GrindSafe Trainer`;
   }, [tab]);
   const [ranges, setRanges] = useState<Range[]>(() => (saved.ranges ?? []).map((r) => ({ ...r, folderId: r.folderId ?? null, actions: r.actions ?? LEGACY_ACTIONS })));
   const [drills, setDrills] = useState<Drill[]>(() => (saved.drills ?? []).map((d) => ({ ...d, folderId: d.folderId ?? null, betSizes: d.betSizes ?? {} })));
@@ -2065,9 +2067,9 @@ export default function App() {
               <img src={logoSvg as string} alt="GrindSafe Trainer" className="h-[22px]" />
           </div>
           <nav className="flex gap-1">
-            {(["builder", "trainer"] as const).map((t) => (
+            {(["community", "builder", "trainer"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${tab === t ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                {t === "builder" ? "Range Builder" : "Trainer"}
+                {t === "community" ? "Community" : t === "builder" ? "Charts" : "Trainer"}
               </button>
             ))}
           </nav>
@@ -2095,8 +2097,10 @@ export default function App() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-hidden p-5">
-          {tab === "builder" ? (
+        <main className={`flex-1 ${tab === "community" ? "" : "overflow-hidden p-5"}`}>
+          {tab === "community" ? (
+            <Community />
+          ) : tab === "builder" ? (
             <Builder ranges={ranges} rangeFolders={rangeFolders} onSaveRange={saveRange} onDeleteRange={deleteRange} onDuplicateRange={duplicateRange} onMoveRange={moveRange} onMoveFolder={moveRangeFolder} onNewRangeFolder={newRangeFolder} onRenameRangeFolder={renameRangeFolder} onDeleteRangeFolder={deleteRangeFolder} />
           ) : (
             <Trainer ranges={ranges} drills={drills} drillFolders={drillFolders} onSaveDrill={saveDrill} onDeleteDrill={deleteDrill} onMoveDrill={moveDrill} onMoveFolder={moveDrillFolder} onNewDrillFolder={newDrillFolder} onRenameDrillFolder={renameDrillFolder} onDeleteDrillFolder={deleteDrillFolder} />
