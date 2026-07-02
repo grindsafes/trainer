@@ -72,7 +72,7 @@ export default function Community() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col">
       <div className="relative overflow-hidden text-white px-8 py-24 text-center">
         <video
           autoPlay

@@ -2061,7 +2061,7 @@ export default function App() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="w-full h-screen flex flex-col overflow-hidden bg-background text-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="w-full h-dvh flex flex-col overflow-hidden overscroll-y-contain bg-background text-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
         <header className="flex-shrink-0 border-b border-border px-6 py-3 flex items-center gap-6">
             <div className="flex items-center gap-2.5">
               <img src={logoSvg as string} alt="GrindSafe Trainer" className="h-[22px]" />
@@ -2097,7 +2097,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className={`flex-1 ${tab === "community" ? "" : "overflow-hidden p-5"}`}>
+        <main className={`flex-1 ${tab === "community" ? "overflow-y-auto" : "overflow-hidden p-5"}`}>
           {tab === "community" ? (
             <Community />
           ) : tab === "builder" ? (
