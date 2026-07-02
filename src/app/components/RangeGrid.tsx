@@ -10,10 +10,11 @@ interface RangeGridProps {
   onPaint: (hand: string) => void;
   readOnly?: boolean;
   highlightHand?: string | null;
+  compact?: boolean;
 }
 
 export function RangeGrid({
-  grid, actions, selectedAction, onPaint, readOnly = false, highlightHand,
+  grid, actions, selectedAction, onPaint, readOnly = false, highlightHand, compact = false,
 }: RangeGridProps) {
   const isPainting = useRef(false);
   const actionMap = Object.fromEntries(actions.map((a) => [a.id, a]));
@@ -57,7 +58,7 @@ export function RangeGrid({
               style={{ backgroundColor: cellBg, border: `1px solid ${cellBorder}`, color: textColor, boxShadow: isHighlight ? `0 0 0 2px var(--ring), 0 0 12px color-mix(in srgb, var(--ring) 50%, transparent)` : undefined }}
               className="aspect-square flex items-center justify-center cursor-pointer rounded-[2px] transition-all duration-75 hover:brightness-125"
             >
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "clamp(5px, 0.9vw, 10px)", fontWeight: 600, lineHeight: 1 }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: compact ? "clamp(3px, 0.5vw, 6px)" : "clamp(5px, 0.9vw, 10px)", fontWeight: 600, lineHeight: 1 }}>
                 {hand}
               </span>
             </div>

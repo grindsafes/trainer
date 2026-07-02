@@ -3,6 +3,7 @@ import { Check, X, Square, Plus, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useTrainerContext } from "../TrainerContext";
 import { loadSessions, saveSessions, expandHand, parseCombo, getPositions, getActionStyle } from "../utils";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { PokerTable } from "../components/PokerTable";
 import { RangeGrid } from "../components/RangeGrid";
 import { SessionGrid } from "../components/SessionGrid";
@@ -11,7 +12,7 @@ import { DrillEditor } from "../components/DrillEditor";
 import type { Drill, Range, SessionData } from "../types";
 
 type TrainerPhase = "idle" | "question" | "result";
-type TrainerView = "drills" | "edit-drill" | "training";
+type TrainerView = "drills" | "edit-drill" | "preview" | "training";
 
 export default function Trainer() {
   const { ranges, drills, drillFolders, saveDrill: onSaveDrill, deleteDrill: onDeleteDrill, moveDrill: onMoveDrill, newDrillFolder, renameDrillFolder, deleteDrillFolder, moveDrillFolder } = useTrainerContext();
@@ -51,11 +52,29 @@ export default function Trainer() {
     setSessions(loaded);
     const active = loaded.find((s) => s.drillId === drill.id && s.endedAt === null);
     setCurrentSessionId(active?.id ?? null);
-    setView("training");
-    setPhase("idle");
     setCurrentHand(null);
     setUserAnswer(null);
     setRevealGrid(false);
+    recentHandsRef.current = [];
+
+    const range = ranges.find((r) => r.id === drill.rangeId) ?? null;
+    if (active && range) {
+      setView("training");
+      setPhase("question");
+      nextHand(range);
+    } else {
+      setView("preview");
+      setPhase("idle");
+    }
+  }
+
+  function goToTraining() {
+    setView("training");
+    if (activeSession) {
+      resumeTraining();
+    } else {
+      startTraining();
+    }
   }
 
   function startNewDrill() {
@@ -111,8 +130,10 @@ export default function Trainer() {
       s.id === currentSession.id ? { ...s, endedAt: Date.now() } : s
     );
     setSessions(updatedSessions);
-    setCurrentSessionId(null);
     saveSessions(updatedSessions);
+    setView("preview");
+    setViewingSessionId(currentSession.id);
+    setCurrentSessionId(null);
     setPhase("idle");
     setCurrentHand(null);
     setCurrentCombo(null);
@@ -285,7 +306,7 @@ export default function Trainer() {
           </div>
         </div>
 
-        {selectedDrill && view === "training" && (
+        {selectedDrill && (view === "preview" || view === "training") && (
           <>
             {activeSession && phase === "idle" && (
               <div className="bg-card rounded-md border border-border p-3">
@@ -308,84 +329,6 @@ export default function Trainer() {
               </div>
             )}
 
-            {phase !== "idle" && stats.total > 0 && (
-              <div className="bg-card rounded-md border border-border p-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Session</p>
-                <p className="text-2xl font-bold text-center" style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  color: parseFloat(accuracy!) >= 80 ? "#22c55e" : parseFloat(accuracy!) >= 60 ? "#fbbf24" : "#ef4444",
-                }}>
-                  {accuracy}%
-                </p>
-                <p className="text-xs text-muted-foreground text-center">{stats.correct}/{stats.total} correct</p>
-              </div>
-            )}
-
-            {phase !== "idle" && currentSession && currentSession.history.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">History</span>
-                <div className="flex flex-col gap-1 max-h-40 overflow-y-auto pr-1">
-                  {currentSession.history.map((entry, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      {renderMiniHandCards(entry.combo ?? entry.hand)}
-                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${entry.correct ? "bg-green-500" : "bg-red-500"}`} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {phase !== "idle" && (
-              <button onClick={stopTraining} className="flex items-center justify-center gap-2 w-full py-2 rounded-full bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
-                <Square size={10} /> End Session
-              </button>
-            )}
-
-            {selectedRange && phase !== "idle" && (
-              <div className="flex flex-col gap-1.5">
-                <button onClick={() => setRevealGrid((v) => !v)} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors text-left">
-                  {revealGrid ? "▼ Range map" : "▶ Range map"}
-                </button>
-                {revealGrid && (
-                  <RangeGrid grid={selectedRange.grid} actions={selectedRange.actions} selectedAction="" onPaint={() => {}} readOnly highlightHand={currentHand} />
-                )}
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Past Sessions</span>
-              {sessions.filter((s) => s.drillId === selectedDrill.id && s.endedAt !== null).length === 0 && (
-                <p className="text-xs text-muted-foreground">No completed sessions yet.</p>
-              )}
-              <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
-                {sessions
-                  .filter((s) => s.drillId === selectedDrill.id && s.endedAt !== null)
-                  .sort((a, b) => b.startedAt - a.startedAt)
-                  .map((s) => {
-                    const pct = s.total > 0 ? ((s.correct / s.total) * 100).toFixed(1) : "0.0";
-                    return (
-                      <div
-                        key={s.id}
-                        onClick={() => viewSession(s.id)}
-                        className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-colors text-xs ${
-                          viewingSessionId === s.id ? "bg-secondary text-foreground" : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-medium truncate">{formatDate(s.startedAt)}</span>
-                          <span className="text-[10px] opacity-70">{s.total} hands</span>
-                        </div>
-                        <span className="font-bold flex-shrink-0 ml-2" style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          color: parseFloat(pct) >= 80 ? "#22c55e" : parseFloat(pct) >= 60 ? "#fbbf24" : "#ef4444",
-                        }}>
-                          {pct}%
-                        </span>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
           </>
         )}
       </aside>
@@ -423,10 +366,10 @@ export default function Trainer() {
           </div>
         )}
 
-        {view === "training" && selectedDrill && viewingSession && (
+        {(view === "preview" || view === "training") && selectedDrill && viewingSession && (
           <div className="flex flex-col gap-6 h-full overflow-y-auto">
             <button onClick={backToTraining} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors self-start">
-              ← Back to Training
+              ← Back
             </button>
             <div className="bg-card rounded-xl border border-border p-5">
               <div className="flex items-center justify-between mb-4">
@@ -474,9 +417,103 @@ export default function Trainer() {
           </div>
         )}
 
+        {view === "preview" && selectedDrill && !viewingSession && (
+          <div className="flex gap-6 h-full">
+            <div className="flex-[7] flex flex-col gap-4 min-w-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">{selectedDrill.name}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {selectedRange ? `${selectedRange.name} · ` : ""}{selectedDrill.numPlayers}p · {selectedDrill.heroPosition}
+                  </p>
+                </div>
+                <button onClick={goToTraining} className="px-5 py-2 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
+                  Start Training
+                </button>
+              </div>
+              <div className="bg-card rounded-xl border border-border p-6 flex items-center justify-center flex-1">
+                <PokerTable
+                  positions={getPositions(selectedDrill.numPlayers)}
+                  heroPosition={selectedDrill.heroPosition}
+                  foldedPositions={selectedDrill.foldedPositions}
+                  betSizes={selectedDrill.betSizes}
+                />
+              </div>
+            </div>
+
+            <div className="flex-[3] flex flex-col gap-4 min-w-0">
+              {(() => {
+                const drillSessions = sessions
+                  .filter((s) => s.drillId === selectedDrill.id && s.endedAt !== null)
+                  .sort((a, b) => a.startedAt - b.startedAt);
+                return (
+                  <>
+                    <div className="bg-card rounded-xl border border-border p-3">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Progress</h3>
+                      {drillSessions.length > 1 ? (
+                        <ResponsiveContainer width="100%" height={180}>
+                          <AreaChart data={drillSessions.map(s => ({
+                            date: formatDate(s.startedAt),
+                            accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0,
+                          }))}>
+                            <defs>
+                              <linearGradient id="accGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <XAxis dataKey="date" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                            <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
+                            />
+                            <Area type="monotone" dataKey="accuracy" stroke="#22c55e" fill="url(#accGrad)" strokeWidth={2} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <p className="text-xs text-muted-foreground text-center py-8">Complete multiple sessions to see your progress.</p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Past Sessions</span>
+                      {drillSessions.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No completed sessions yet.</p>
+                      )}
+                      <div className="flex flex-col gap-1">
+                        {[...drillSessions].reverse().map((s) => {
+                          const pct = s.total > 0 ? ((s.correct / s.total) * 100).toFixed(1) : "0.0";
+                          return (
+                            <div
+                              key={s.id}
+                              onClick={() => viewSession(s.id)}
+                              className="flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-colors text-xs hover:bg-secondary text-muted-foreground hover:text-foreground"
+                            >
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-medium truncate">{formatDate(s.startedAt)}</span>
+                                <span className="text-[10px] opacity-70">{s.total} hands</span>
+                              </div>
+                              <span className="font-bold flex-shrink-0 ml-2" style={{
+                                fontFamily: "'JetBrains Mono', monospace",
+                                color: parseFloat(pct) >= 80 ? "#22c55e" : parseFloat(pct) >= 60 ? "#fbbf24" : "#ef4444",
+                              }}>
+                                {pct}%
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
         {view === "training" && selectedDrill && !viewingSession && (
-          <div className="flex flex-col items-center justify-center h-full gap-8">
-            {phase === "idle" && (
+          phase === "idle" ? (
+            <div className="flex flex-col items-center justify-center h-full gap-8">
               <div className="text-center space-y-4">
                 <p className="text-sm text-muted-foreground">
                   {!selectedRange
@@ -508,34 +545,88 @@ export default function Trainer() {
                   </button>
                 )}
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="flex gap-6 h-full">
+              <div className="flex-[7] flex flex-col items-center justify-center gap-6 min-w-0 relative">
+                {selectedRange && (
+                  <div className="absolute -top-1 -left-1 z-10 flex flex-col items-start gap-1">
+                    <button onClick={() => setRevealGrid((v) => !v)} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors bg-card/80 px-1.5 py-0.5 rounded">
+                      {revealGrid ? "▼ Range map" : "▶ Range map"}
+                    </button>
+                    {revealGrid && (
+                      <div className="bg-card/95 backdrop-blur-sm rounded-lg border border-border p-1.5 shadow-lg w-48">
+                        <RangeGrid compact grid={selectedRange.grid} actions={selectedRange.actions} selectedAction="" onPaint={() => {}} readOnly highlightHand={currentHand} />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {currentHand && currentCombo && (
+                  <>
+                    <div className="w-full max-w-4xl">
+                      <PokerTable
+                        positions={getPositions(selectedDrill.numPlayers)}
+                        heroPosition={selectedDrill.heroPosition}
+                        heroHand={currentCombo}
+                        foldedPositions={selectedDrill.foldedPositions}
+                        betSizes={selectedDrill.betSizes}
+                      />
+                    </div>
+                    <div className="flex justify-center w-full">
+                      <div className="grid grid-cols-3 gap-3 max-w-lg w-full">
+                        {rangeActions.map((a) => (
+                          <button key={a.id} onClick={() => answer(a.id)} disabled={userAnswer !== null}
+                            style={getActionStyle(a)}
+                            className="py-3 rounded-full border font-semibold text-sm hover:brightness-125 transition-all active:scale-95 truncate px-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:brightness-75">
+                            {a.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
 
-            {phase === "question" && currentHand && currentCombo && (
-              <div className="flex flex-col items-center gap-6 w-full max-w-6xl">
-                <div className="w-full">
-                  <PokerTable
-                    positions={getPositions(selectedDrill.numPlayers)}
-                    heroPosition={selectedDrill.heroPosition}
-                    heroHand={currentCombo}
-                    foldedPositions={selectedDrill.foldedPositions}
-                    betSizes={selectedDrill.betSizes}
-                  />
+              <div className="flex-[3] flex flex-col gap-4 min-w-0">
+                <div className="bg-card rounded-xl border border-border p-4 text-center">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Session Accuracy</p>
+                  <p className="text-3xl font-bold" style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    color: accuracy ? (parseFloat(accuracy) >= 80 ? "#22c55e" : parseFloat(accuracy) >= 60 ? "#fbbf24" : "#ef4444") : "var(--muted-foreground)",
+                  }}>
+                    {accuracy ?? "0.0"}%
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{stats.correct}/{stats.total} correct</p>
                 </div>
 
-                <div className="flex justify-center w-full">
-                  <div className="grid grid-cols-3 gap-3 max-w-lg w-full">
-                    {rangeActions.map((a) => (
-                      <button key={a.id} onClick={() => answer(a.id)} disabled={userAnswer !== null}
-                        style={getActionStyle(a)}
-                        className="py-3 rounded-full border font-semibold text-sm hover:brightness-125 transition-all active:scale-95 truncate px-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:brightness-75">
-                        {a.label}
-                      </button>
-                    ))}
+                {currentSession && (
+                  <div className="bg-card rounded-xl border border-border p-3 flex-1 overflow-y-auto min-h-0">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Per-Combo Accuracy</p>
+                    <SessionGrid comboStats={currentSession.comboStats} />
                   </div>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  {currentSession && currentSession.history.length > 0 && (
+                    <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">History</span>
+                      <div className="flex flex-col gap-1">
+                        {currentSession.history.slice(0, 10).map((entry, i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            {renderMiniHandCards(entry.combo ?? entry.hand)}
+                            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${entry.correct ? "bg-green-500" : "bg-red-500"}`} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={stopTraining} className="flex items-center justify-center gap-2 w-full py-2 rounded-full bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
+                    <Square size={10} /> End Session
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )
         )}
       </div>
     </div>
