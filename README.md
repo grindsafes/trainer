@@ -1,6 +1,6 @@
 ![](public/readme-banner.jpg)
 
-GrindSafe Trainer is a free, open-source tool created by poker players for poker players. Our mission is to make preflop range training accessible to everyone, regardless of skill level or budget. Whether you're grinding micro stakes or climbing the high-stakes ladder, building accurate preflop ranges is the foundation of a winning strategy.
+GrindSafe Trainer is a free, open-source tool with unlimited charts and drills created by poker players for poker players. Our mission is to make preflop range training accessible to everyone, regardless of skill level or budget. Whether you're grinding micro stakes or climbing the high-stakes ladder, building accurate preflop ranges is the foundation of a winning strategy.
 
 This project thrives on community contributions — from range charts and drill configurations to code improvements and feature ideas. Everyone is welcome to join, learn, and help build the best free poker training tool available.
 
