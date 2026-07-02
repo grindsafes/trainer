@@ -72,8 +72,8 @@ export default function Community() {
   }, []);
 
   return (
-    <div className="flex flex-col">
-      <div className="relative overflow-hidden text-white px-8 py-24 text-center">
+    <div className="flex flex-col h-full overflow-y-auto">
+      <div className="relative overflow-hidden text-white px-8 min-h-[40vh] flex items-center justify-center text-center">
         <video
           autoPlay
           loop
@@ -84,7 +84,7 @@ export default function Community() {
           <source src="/hero-bg.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/60" />
-        <div className="relative z-10">
+        <div className="relative z-10 py-10">
           <h1 className="text-4xl font-bold mb-4">Welcome to GrindSafe Trainer</h1>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
             A community-driven preflop trainer built by and for poker players.
@@ -187,6 +187,12 @@ export default function Community() {
                   question: "Is this project open-source?",
                   answer:
                     "Absolutely. GrindSafe Trainer is open-source under the MIT license. You can find the source code, report issues, and contribute on GitHub at github.com/grindsafes/preflop-trainer.",
+                },
+                {
+                  id: "unlimited",
+                  question: "Are there any limits on charts or drills?",
+                  answer:
+                    "No. You can create unlimited ranges (charts) and unlimited drills completely free. There are no usage caps, no paywalls, and no subscription tiers. All features are available to all users.",
                 },
               ].map((item) => (
                 <AccordionItem key={item.id} value={item.id}>
