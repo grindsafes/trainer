@@ -1,4 +1,4 @@
-import { T_CX, T_CY, T_RX, T_RY, S_RX, S_RY } from "../constants";
+import { T_CX, T_CY, T_RX, T_RY, S_RX, S_RY, POSITION_IMAGES, PLAYER_NAMES, PLAYER_STACKS } from "../constants";
 import { getSeatPos, getAngle, parseCombo } from "../utils";
 
 interface PokerTableProps {
@@ -44,7 +44,7 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
       className="w-full"
       style={{ maxWidth: compact ? 160 : "none" }}
     >
-      <ellipse cx={T_CX} cy={T_CY + 6} rx={T_RX} ry={T_RY} fill="rgba(0,0,0,0.5)" />
+      <ellipse cx={T_CX} cy={T_CY + 6} rx={T_RX} ry={T_RY} fill="rgba(0,0,0,0.6)" />
       <ellipse cx={T_CX} cy={T_CY} rx={T_RX} ry={T_RY} fill="#0d3320" />
       <ellipse cx={T_CX} cy={T_CY} rx={T_RX} ry={T_RY} fill="none" stroke="#1a5c35" strokeWidth={7} />
       <ellipse cx={T_CX} cy={T_CY} rx={T_RX - 10} ry={T_RY - 10} fill="none" stroke="#22c55e" strokeWidth={0.75} opacity={0.25} />
@@ -66,108 +66,111 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
         const isFolded = !isHero && foldedPositions.includes(pos);
         const betSize = betSizes[pos];
 
+        const isTop = y < T_CY;
+        const bodyTop = isTop ? y + 4 : y - 40;
+        const avatarCy = bodyTop - 12;
+        const ndx = (x - T_CX) / S_RX;
+        const ndy = (y - T_CY) / S_RY;
+        const isHorizontal = Math.abs(ndx) > Math.abs(ndy);
+
+        let chipX: number, chipY: number;
+        if (isHorizontal) {
+          const sign = x < T_CX ? 1 : -1;
+          chipX = x + sign * 44;
+          chipY = y;
+        } else {
+          const innerExtent = isTop ? bodyTop + 32 : avatarCy - 24;
+          const chipOffset = Math.abs(y - innerExtent) + 4;
+          chipX = x;
+          chipY = isTop ? y + chipOffset : y - chipOffset;
+        }
+
         return (
           <g
             key={pos}
             onClick={() => onSelectHero?.(pos)}
-            style={{ cursor: interactive && !isHero ? "pointer" : "default", opacity: isFolded ? 0.35 : 1 }}
+            style={{ cursor: interactive && !isHero ? "pointer" : "default", opacity: isFolded ? 0.3 : 1 }}
           >
-            {isHero && (
-              <circle cx={x} cy={y} r={r + 8} fill="#22c55e" fillOpacity={0.12} />
-            )}
-            {interactive && !isHero && (
-              <circle cx={x} cy={y} r={r + 6} fill="white" fillOpacity={0} className="hover-ring" />
-            )}
-
-            {isHero && heroHand ? (
-              renderHeroCards(heroHand, x, y)
+            {compact ? (
+              <>
+                <circle cx={x} cy={y} r={r} fill="var(--secondary)" stroke="var(--border)" strokeWidth={1.5} />
+                <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fill="var(--muted-foreground)" fontSize={7} fontWeight={700} fontFamily="JetBrains Mono, monospace">{pos}</text>
+              </>
             ) : (
               <>
-                <circle
-                  cx={x} cy={y} r={r}
-                  style={{ fill: isHero ? "var(--accent)" : "var(--secondary)" }}
-                  stroke={
-                    isHero ? "var(--primary)" :
-                    isFolded ? "var(--muted-foreground)" : "var(--border)"
-                  }
-                  strokeWidth={isHero ? 2.5 : 1.5}
-                />
-                <text
-                  x={x} y={y}
-                  textAnchor="middle" dominantBaseline="middle"
-                  style={{ fill: isHero ? "var(--primary)" : "var(--muted-foreground)" }}
-                  fontSize={compact ? 7 : 9}
-                  fontWeight={700}
-                  fontFamily="JetBrains Mono, monospace"
-                >
-                  {pos}
-                </text>
-                {isHero && !compact && (
-                  <text
-                    x={x} y={y + 11}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fill="#4ade80" fontSize={6.5}
-                    fontFamily="Inter, sans-serif"
-                    letterSpacing={0.8}
-                  >
-                    HERO
-                  </text>
-                )}
-                {isFolded && (
-                  <text
-                    x={x} y={y + 11}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fill="var(--muted-foreground)" fontSize={5.5}
-                    fontFamily="Inter, sans-serif"
-                    letterSpacing={0.5}
-                  >
-                    FOLD
-                  </text>
-                )}
+                {(() => {
+                  const bodyW = 80, bodyH = 32, avatarR = 24;
+                  const glowY = isTop ? y - 30 : y - 74;
+                  const heroY = isTop ? y + 52 : y - 78;
+
+                  return (
+                    <>
+
+                      <defs>
+                        <clipPath id={`avatar-${pos}`}>
+                          <circle cx={x} cy={avatarCy} r={avatarR} />
+                        </clipPath>
+                      </defs>
+                      <image href={POSITION_IMAGES[pos]}
+                        x={x - avatarR} y={avatarCy - avatarR}
+                        width={2 * avatarR} height={2 * avatarR}
+                        clipPath={`url(#avatar-${pos})`}
+                        preserveAspectRatio="xMidYMid slice"
+                      />
+                      <circle cx={x} cy={avatarCy} r={avatarR}
+                        fill="none"
+                        stroke="var(--border)"
+                        strokeWidth={1}
+                      />
+                      <rect x={x - bodyW / 2} y={bodyTop} width={bodyW} height={bodyH} rx={8}
+                        fill="var(--card)"
+                        stroke="var(--border)"
+                        strokeWidth={1}
+                      />
+                      <text x={x} y={bodyTop + 11}
+                        textAnchor="middle" dominantBaseline="middle"
+                        fill="var(--muted-foreground)"
+                        fontSize={7.5} fontWeight={500}
+                        fontFamily="Inter, sans-serif"
+                      >
+                        {PLAYER_NAMES[pos]}
+                      </text>
+                      <text x={x} y={bodyTop + 22}
+                        textAnchor="middle" dominantBaseline="middle"
+                        fill="var(--muted-foreground)"
+                        fontSize={7}
+                        fontFamily="JetBrains Mono, monospace"
+                      >
+                        {PLAYER_STACKS[pos]}
+                      </text>
+                    </>
+                  );
+                })()}
               </>
             )}
-            {betSize && !compact && (
-              <>
-                <circle
-                  cx={T_CX + (x - T_CX) * 0.72}
-                  cy={T_CY + (y - T_CY) * 0.72}
-                  r={5.5}
-                  style={{ fill: isFolded ? "var(--muted)" : "var(--card)" }}
-                  stroke={isFolded ? "var(--muted-foreground)" : "#1a5c35"}
-                  strokeWidth={1.5}
-                />
-                <circle
-                  cx={T_CX + (x - T_CX) * 0.72}
-                  cy={T_CY + (y - T_CY) * 0.72}
-                  r={3.5}
-                  fill="none"
-                  stroke={isFolded ? "var(--muted-foreground)" : "#1a5c35"}
-                  strokeWidth={0.8}
-                />
-                <circle
-                  cx={T_CX + (x - T_CX) * 0.72}
-                  cy={T_CY + (y - T_CY) * 0.72}
-                  r={1.2}
-                  fill={isFolded ? "var(--muted-foreground)" : "#1a5c35"}
-                />
-                <text
-                  x={T_CX + (x - T_CX) * 0.72 + 9}
-                  y={T_CY + (y - T_CY) * 0.72 + 0.5}
-                  textAnchor="start" dominantBaseline="middle"
-                  style={{ fill: isFolded ? "var(--muted-foreground)" : "#e8eaed" }}
-                  fontSize={6.5}
-                  fontWeight={600}
-                  fontFamily="JetBrains Mono, monospace"
-                >
-                  {betSize}
-                </text>
-              </>
+            {isHero && heroHand && renderHeroCards(heroHand, x, y)}
+            {!compact && (pos === "BU" || betSize) && (
+              <g transform={`translate(${chipX}, ${chipY})`}>
+                {pos === "BU" && (
+                  <>
+                    <circle cx={0} cy={0} r={7} fill="#facc15" stroke="#1a5c35" strokeWidth={1.5} />
+                    <circle cx={0} cy={0} r={5} fill="none" stroke="#1a5c35" strokeWidth={0.6} />
+                    <text x={0} y={0.5} textAnchor="middle" dominantBaseline="middle" fill="#1a5c35" fontSize={7} fontWeight={800} fontFamily="JetBrains Mono, monospace">D</text>
+                  </>
+                )}
+                {betSize && (
+                  <g transform={`translate(${pos === "BU" ? 18 : 0}, 0)`}>
+                    <circle cx={0} cy={0} r={5.5} style={{ fill: isFolded ? "var(--muted)" : "var(--card)" }} stroke={isFolded ? "var(--muted-foreground)" : "#1a5c35"} strokeWidth={1.5} />
+                    <circle cx={0} cy={0} r={3.5} fill="none" stroke={isFolded ? "var(--muted-foreground)" : "#1a5c35"} strokeWidth={0.8} />
+                    <circle cx={0} cy={0} r={1.2} fill={isFolded ? "var(--muted-foreground)" : "#1a5c35"} />
+                    <text x={9} y={0.5} textAnchor="start" dominantBaseline="middle" style={{ fill: isFolded ? "var(--muted-foreground)" : "#e8eaed" }} fontSize={6.5} fontWeight={600} fontFamily="JetBrains Mono, monospace">{betSize}</text>
+                  </g>
+                )}
+              </g>
             )}
             {interactive && !isHero && (
-              <circle
-                cx={x} cy={y} r={r}
-                fill="white" fillOpacity={0}
-                className="seat-hover"
+              <rect x={x - 40} y={y < T_CY ? y - 36 : y - 80} width={80} height={76} rx={14}
+                fill="white" fillOpacity={0} className="seat-hover"
               />
             )}
           </g>

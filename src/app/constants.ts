@@ -2,6 +2,33 @@ import type { ActionDef } from "./types";
 
 export const ALL_POSITIONS = ["EP", "MP", "LJ", "BU", "SB", "BB"];
 
+export const POSITION_IMAGES: Record<string, string> = {
+  EP: "/profiles/output.jpg",
+  MP: "/profiles/output (1).jpg",
+  LJ: "/profiles/output (2).jpg",
+  BU: "/profiles/output (3).jpg",
+  SB: "/profiles/output (4).jpg",
+  BB: "/profiles/output (5).jpg",
+};
+
+export const PLAYER_NAMES: Record<string, string> = {
+  EP: "Player 1",
+  MP: "Player 2",
+  LJ: "Player 3",
+  BU: "Player 4",
+  SB: "Player 5",
+  BB: "Player 6",
+};
+
+export const PLAYER_STACKS: Record<string, string> = {
+  EP: "1,200",
+  MP: "1,200",
+  LJ: "1,200",
+  BU: "1,200",
+  SB: "1,200",
+  BB: "1,200",
+};
+
 export const T_CX = 230, T_CY = 180;
 export const T_RX = 178, T_RY = 108;
 export const S_RX = 200, S_RY = 132;
