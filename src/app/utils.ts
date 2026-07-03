@@ -42,13 +42,20 @@ export function expandHand(hand: string): string {
   return hand[0] + s1 + hand[1] + s2;
 }
 
+const SUIT_COLORS: Record<string, string> = {
+  c: "#22c55e",
+  h: "#ef4444",
+  d: "#3b82f6",
+  s: "#000000",
+};
+
 export function parseCombo(combo: string): { ranks: string[]; suits: string[]; colors: string[] } {
   return {
     ranks: [combo[0], combo[2]],
     suits: [SUIT_MAP[combo[1]], SUIT_MAP[combo[3]]],
     colors: [
-      combo[1] === "h" || combo[1] === "d" ? "#ef4444" : "var(--card-foreground)",
-      combo[3] === "h" || combo[3] === "d" ? "#ef4444" : "var(--card-foreground)",
+      SUIT_COLORS[combo[1]] ?? "var(--card-foreground)",
+      SUIT_COLORS[combo[3]] ?? "var(--card-foreground)",
     ],
   };
 }

@@ -16,20 +16,23 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
   const heroIdx = positions.indexOf(heroPosition);
   const interactive = !!onSelectHero;
 
-  function renderHeroCards(combo: string, cx: number, cy: number) {
+    function renderHeroCards(combo: string, cx: number, cy: number) {
     const { ranks, suits, colors } = parseCombo(combo);
-    const cw = 22, ch = 32, gap = 2;
+    const cw = 34, ch = 58, gap = 2;
     const startX = cx - cw - gap / 2;
 
     return (
       <>
         {[0, 1].map((i) => (
           <g key={i}>
-            <rect x={startX + i * (cw + gap)} y={cy - ch / 2} width={cw} height={ch} rx={3} style={{ fill: "var(--card)", stroke: "var(--border)" }} strokeWidth={1} />
-            <text x={startX + i * (cw + gap) + cw / 2} y={cy - 3} textAnchor="middle" dominantBaseline="middle" fill={colors[i]} fontSize={10} fontWeight={700} fontFamily="JetBrains Mono, monospace">
+            <rect x={startX + i * (cw + gap)} y={cy - ch / 2} width={cw} height={ch} rx={5} style={{ fill: colors[i], stroke: "var(--border)" }} strokeWidth={1} />
+            <text x={startX + i * (cw + gap) + cw / 2} y={cy - 7} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={16} fontWeight={700} fontFamily="JetBrains Mono, monospace">
               {ranks[i]}
             </text>
-            <text x={startX + i * (cw + gap) + cw / 2} y={cy + 9} textAnchor="middle" dominantBaseline="middle" fill={colors[i]} fontSize={8}>
+            <text x={startX + i * (cw + gap) + cw - 5} y={cy - 20} textAnchor="end" dominantBaseline="middle" fill="white" fontSize={8}>
+              {suits[i]}
+            </text>
+            <text x={startX + i * (cw + gap) + cw / 2} y={cy + 15} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={12}>
               {suits[i]}
             </text>
           </g>
@@ -122,6 +125,7 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
                         stroke="var(--border)"
                         strokeWidth={1}
                       />
+                      {isHero && heroHand && renderHeroCards(heroHand, x, bodyTop - 2)}
                       <rect x={x - bodyW / 2} y={bodyTop} width={bodyW} height={bodyH} rx={8}
                         fill="var(--card)"
                         stroke="var(--border)"
@@ -148,7 +152,6 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
                 })()}
               </>
             )}
-            {isHero && heroHand && renderHeroCards(heroHand, x, y)}
             {!compact && (pos === "BU" || betSize) && (
               <g transform={`translate(${chipX}, ${chipY})`}>
                 {pos === "BU" && (
