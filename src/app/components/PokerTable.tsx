@@ -9,9 +9,10 @@ interface PokerTableProps {
   heroHand?: string | null;
   foldedPositions?: string[];
   betSizes?: Record<string, string>;
+  flippingOut?: boolean;
 }
 
-export function PokerTable({ positions, heroPosition, onSelectHero, compact = false, heroHand, foldedPositions = [], betSizes = {} }: PokerTableProps) {
+export function PokerTable({ positions, heroPosition, onSelectHero, compact = false, heroHand, foldedPositions = [], betSizes = {}, flippingOut = false }: PokerTableProps) {
   const N = positions.length;
   const heroIdx = positions.indexOf(heroPosition);
   const interactive = !!onSelectHero;
@@ -24,7 +25,8 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
     return (
       <>
         {[0, 1].map((i) => (
-          <g key={i}>
+          <g key={`${combo}-${i}`} className={flippingOut ? "card-flip-out" : "card-flip-in"}
+            style={{ animationDelay: i === 0 ? "0.12s" : "0s", transformOrigin: "center" }}>
             <rect x={startX + i * (cw + gap)} y={cy - ch / 2} width={cw} height={ch} rx={5} style={{ fill: colors[i], stroke: "var(--border)" }} strokeWidth={1} />
             <text x={startX + i * (cw + gap) + cw / 2} y={cy - 7} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={16} fontWeight={700} fontFamily="JetBrains Mono, monospace">
               {ranks[i]}
@@ -181,6 +183,16 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
       })}
 
       <style>{`
+        @keyframes flipIn {
+          from { transform: perspective(600px) rotateY(180deg); opacity: 0; }
+          to { transform: perspective(600px) rotateY(0deg); opacity: 1; }
+        }
+        @keyframes flipOut {
+          from { transform: perspective(600px) rotateY(0deg); opacity: 1; }
+          to { transform: perspective(600px) rotateY(-180deg); opacity: 0; }
+        }
+        .card-flip-in { animation: flipIn 0.35s ease-out forwards; }
+        .card-flip-out { animation: flipOut 0.35s ease-in forwards; }
         .seat-hover:hover { fill-opacity: 0.08; }
         .seat-hover { transition: fill-opacity 0.15s; }
       `}</style>

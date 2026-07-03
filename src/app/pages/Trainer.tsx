@@ -34,6 +34,7 @@ export default function Trainer() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [flippingOut, setFlippingOut] = useState(false);
 
   const selectedDrill = drills.find((d) => d.id === selectedDrillId) ?? null;
   const selectedRange = selectedDrill ? ranges.find((r) => r.id === selectedDrill.rangeId) ?? null : null;
@@ -197,7 +198,11 @@ export default function Trainer() {
     });
     setSessions(updatedSessions);
     saveSessions(updatedSessions);
-    setTimeout(() => nextHand(selectedRange), 1500);
+    setFlippingOut(true);
+    setTimeout(() => {
+      nextHand(selectedRange);
+      setFlippingOut(false);
+    }, 1500);
   }
 
   function viewSession(sessionId: string) {
@@ -647,6 +652,7 @@ export default function Trainer() {
                         heroHand={currentCombo}
                         foldedPositions={selectedDrill.foldedPositions}
                         betSizes={selectedDrill.betSizes}
+                        flippingOut={flippingOut}
                       />
                     </div>
                     <div className="flex justify-center w-full px-2">
