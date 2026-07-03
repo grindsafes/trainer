@@ -66,6 +66,9 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
           <rect width="4" height="4" fill="#e8eaed" />
           <rect x="4" y="4" width="4" height="4" fill="#e8eaed" />
         </pattern>
+        <filter id="hero-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
+        </filter>
       </defs>
       <ellipse cx={T_CX} cy={T_CY + 6} rx={T_RX} ry={T_RY} fill="rgba(0,0,0,0.6)" />
       <ellipse cx={T_CX} cy={T_CY} rx={T_RX} ry={T_RY} fill="#0d3320" />
@@ -134,6 +137,13 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
                           <circle cx={x} cy={avatarCy} r={avatarR} />
                         </clipPath>
                       </defs>
+                      {isHero && (
+                        <circle cx={x} cy={avatarCy} r={avatarR + 4}
+                          fill="white" opacity={0.35}
+                          filter="url(#hero-glow)"
+                          className="hero-pulse"
+                        />
+                      )}
                       <image href={POSITION_IMAGES[pos]}
                         x={x - avatarR} y={avatarCy - avatarR}
                         width={2 * avatarR} height={2 * avatarR}
@@ -148,7 +158,7 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
                       {isHero && heroHand && renderHeroCards(heroHand, x, bodyTop - 2)}
                       <rect x={x - bodyW / 2} y={bodyTop} width={bodyW} height={bodyH} rx={8}
                         fill="var(--card)"
-                        stroke="var(--border)"
+                        stroke={isHero ? "#6b7280" : "var(--border)"}
                         strokeWidth={1}
                       />
                       <text x={x} y={bodyTop + 11}
@@ -157,7 +167,7 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
                         fontSize={7.5} fontWeight={500}
                         fontFamily="Inter, sans-serif"
                       >
-                        {PLAYER_NAMES[pos]}
+                        {isHero ? "Hero" : PLAYER_NAMES[pos]}
                       </text>
                       <text x={x} y={bodyTop + 22}
                         textAnchor="middle" dominantBaseline="middle"
@@ -235,6 +245,12 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
 
         .seat-hover:hover { fill-opacity: 0.08; }
         .seat-hover { transition: fill-opacity 0.15s; }
+
+        @keyframes heroPulse {
+          0%, 100% { opacity: 0.15; }
+          50% { opacity: 0.5; }
+        }
+        .hero-pulse { animation: heroPulse 2s ease-in-out infinite; }
       `}</style>
     </svg>
   );
