@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { FolderPlus, Plus } from "lucide-react";
 import { useTrainerContext } from "../TrainerContext";
 import { DEFAULT_ACTIONS, LEGACY_ACTIONS, COLOR_PRESETS } from "../constants";
@@ -64,6 +65,14 @@ export default function Builder() {
   const actionCounts = actions.map((a) => ({ ...a, count: Object.values(grid).filter((v) => v === a.id).length })).filter((a) => a.count > 0);
 
   return (
+    <>
+    <Helmet>
+      <title>Charts</title>
+      <meta name="description" content="Build custom preflop ranges with the interactive hand matrix. Assign actions, customize colors, and export your charts." />
+      <meta property="og:title" content="Charts" />
+      <meta property="og:description" content="Build custom preflop ranges with the interactive hand matrix." />
+      <meta property="og:url" content="https://trainer.grindsafe.app/charts" />
+    </Helmet>
     <div className="flex gap-5 h-full px-6 py-5">
       <aside className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto border-r border-border pr-4">
         <div className="flex flex-col gap-2">
@@ -160,5 +169,6 @@ export default function Builder() {
         </div>
       </div>
     </div>
+    </>
   );
 }

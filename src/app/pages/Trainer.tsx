@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Helmet } from "react-helmet-async";
 import { Check, X, Square, Plus, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useTrainerContext } from "../TrainerContext";
@@ -238,6 +239,14 @@ export default function Trainer() {
   }
 
   return (
+    <>
+    <Helmet>
+      <title>Trainer</title>
+      <meta name="description" content="Practice your preflop ranges with interactive drills. Track accuracy, review session history, and build muscle memory." />
+      <meta property="og:title" content="Trainer" />
+      <meta property="og:description" content="Practice your preflop ranges with interactive drills." />
+      <meta property="og:url" content="https://trainer.grindsafe.app/trainer" />
+    </Helmet>
     <div className="flex gap-5 h-full px-6 py-5">
       <aside className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto border-r border-border pr-4">
         <div className="flex flex-col gap-2">
@@ -630,5 +639,6 @@ export default function Trainer() {
         )}
       </div>
     </div>
+    </>
   );
 }

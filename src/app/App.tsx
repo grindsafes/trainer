@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from "react-router";
+import { Helmet } from "react-helmet-async";
 import { useTheme } from "next-themes";
 import { Download, Upload, Sun, Moon } from "lucide-react";
 import logoSvg from "./imgs/logo.svg";
@@ -9,10 +10,18 @@ export default function App() {
   const { ranges, drills, importRef, exportData, importData } = useTrainerContext();
 
   return (
+    <>
+    <Helmet>
+      <title>GrindSafe</title>
+      <meta name="description" content="Enhance your poker skills with a customizable trainer that allows users to create action ranges and practice with tailored training sessions." />
+      <meta property="og:title" content="GrindSafe" />
+      <meta property="og:description" content="Enhance your poker skills with a customizable trainer that allows users to create action ranges and practice with tailored training sessions." />
+      <meta property="og:url" content="https://trainer.grindsafe.app" />
+    </Helmet>
     <div className="w-full h-dvh flex flex-col overflow-hidden overscroll-y-contain bg-background text-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
       <header className="flex-shrink-0 border-b border-border px-6 py-3 flex items-center gap-6">
         <div className="flex items-center gap-2.5">
-          <img src={theme === "dark" ? "/grindsafe-logo-dark.svg" : (logoSvg as string)} alt="GrindSafe Trainer" className="h-[22px]" />
+          <img src={theme === "dark" ? "/grindsafe-logo-dark.svg" : (logoSvg as string)} alt="GrindSafe" className="h-[22px]" />
         </div>
         <nav className="flex gap-1">
           {(["community", "charts", "trainer"] as const).map((t) => (
@@ -55,5 +64,6 @@ export default function App() {
         <Outlet />
       </main>
     </div>
+    </>
   );
 }

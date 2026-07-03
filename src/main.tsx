@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "next-themes";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -12,6 +13,7 @@ import { Toaster } from "./app/components/ui/sonner";
 import "./styles/index.css";
 
 createRoot(document.getElementById("root")!).render(
+  <HelmetProvider>
   <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
     <DndProvider backend={HTML5Backend}>
       <TrainerProvider>
@@ -29,4 +31,5 @@ createRoot(document.getElementById("root")!).render(
       </TrainerProvider>
     </DndProvider>
   </ThemeProvider>
+  </HelmetProvider>
 );

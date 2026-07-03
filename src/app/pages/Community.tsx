@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import {
   Accordion,
   AccordionContent,
@@ -72,6 +73,14 @@ export default function Community() {
   }, []);
 
   return (
+    <>
+    <Helmet>
+      <title>Community</title>
+      <meta name="description" content="Join the GrindSafe community — a free, open-source poker trainer built by and for poker players. Learn, contribute, and master your ranges." />
+      <meta property="og:title" content="Community" />
+      <meta property="og:description" content="Join the GrindSafe community — a free, open-source poker trainer built by and for poker players." />
+      <meta property="og:url" content="https://trainer.grindsafe.app/community" />
+    </Helmet>
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="relative overflow-hidden text-white px-8 min-h-[40vh] flex items-center justify-center text-center">
         <video
@@ -85,9 +94,9 @@ export default function Community() {
         </video>
         <div className="absolute inset-0 bg-black/60" />
         <div className="relative z-10 py-10">
-          <h1 className="text-4xl font-bold mb-4">Welcome to GrindSafe Trainer</h1>
+          <h1 className="text-4xl font-bold mb-4">Welcome to GrindSafe</h1>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            A community-driven preflop trainer built by and for poker players.
+            A community-driven trainer built by and for poker players.
             Create, study, and master your preflop ranges with interactive drills
             and detailed analytics.
           </p>
@@ -100,7 +109,7 @@ export default function Community() {
             <section>
               <h2 className="text-xl font-semibold mb-3">About Us</h2>
               <p className="text-muted-foreground max-w-3xl leading-relaxed">
-                GrindSafe Trainer is a free, open-source tool created by poker players for poker players.
+                GrindSafe is a free, open-source tool created by poker players for poker players.
                 Our mission is to make preflop range training accessible to everyone, regardless of skill
                 level or budget. Whether you&apos;re grinding micro stakes or climbing the high-stakes
                 ladder, building accurate preflop ranges is the foundation of a winning strategy.
@@ -142,9 +151,9 @@ export default function Community() {
               {[
                 {
                   id: "what-is",
-                  question: "What is GrindSafe Trainer?",
+                  question: "What is GrindSafe?",
                   answer:
-                    "GrindSafe Trainer is a free, open-source preflop poker training tool. It lets you build custom preflop ranges using an interactive hand matrix and then drill those ranges with timed or untimed quizzes to build muscle memory.",
+                    "GrindSafe is a free, open-source poker training tool. It lets you build custom ranges using an interactive hand matrix and then drill those ranges with timed or untimed quizzes to build muscle memory.",
                 },
                 {
                   id: "create-range",
@@ -174,7 +183,7 @@ export default function Community() {
                   id: "share-ranges",
                   question: "How do I share ranges with others?",
                   answer:
-                    "Use the Export button to download a JSON file containing your ranges. Send that file to anyone else using GrindSafe Trainer. They can import it with the Import button and use your ranges in their own drills.",
+                    "Use the Export button to download a JSON file containing your ranges. Send that file to anyone else using GrindSafe. They can import it with the Import button and use your ranges in their own drills.",
                 },
                 {
                   id: "dark-mode",
@@ -186,7 +195,7 @@ export default function Community() {
                   id: "open-source",
                   question: "Is this project open-source?",
                   answer:
-                    "Absolutely. GrindSafe Trainer is open-source under the MIT license. You can find the source code, report issues, and contribute on GitHub at github.com/grindsafes/preflop-trainer.",
+                    "Absolutely. GrindSafe is open-source under the MIT license. You can find the source code, report issues, and contribute on GitHub at github.com/grindsafes/preflop-trainer.",
                 },
                 {
                   id: "unlimited",
@@ -205,5 +214,6 @@ export default function Community() {
         </div>
       </div>
     </div>
+    </>
   );
 }
