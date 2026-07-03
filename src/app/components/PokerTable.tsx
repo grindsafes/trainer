@@ -42,7 +42,7 @@ export function PokerTable({ positions, heroPosition, onSelectHero, compact = fa
     <svg
       viewBox="0 0 460 380"
       className="w-full"
-      style={{ maxWidth: compact ? 160 : 960 }}
+      style={{ maxWidth: compact ? 160 : "none" }}
     >
       <ellipse cx={T_CX} cy={T_CY + 6} rx={T_RX} ry={T_RY} fill="rgba(0,0,0,0.5)" />
       <ellipse cx={T_CX} cy={T_CY} rx={T_RX} ry={T_RY} fill="#0d3320" />

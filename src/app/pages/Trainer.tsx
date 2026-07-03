@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Helmet } from "react-helmet-async";
-import { Check, X, Square, Plus, FolderPlus } from "lucide-react";
+import { Check, X, Square, Plus, FolderPlus, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { useTrainerContext } from "../TrainerContext";
 import { loadSessions, saveSessions, expandHand, parseCombo, getPositions, getActionStyle } from "../utils";
@@ -10,6 +10,7 @@ import { RangeGrid } from "../components/RangeGrid";
 import { SessionGrid } from "../components/SessionGrid";
 import { FolderTree } from "../components/FolderTree";
 import { DrillEditor } from "../components/DrillEditor";
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "../components/ui/drawer";
 import type { Drill, Range, SessionData } from "../types";
 
 type TrainerPhase = "idle" | "question" | "result";
@@ -32,6 +33,7 @@ export default function Trainer() {
   const [sessions, setSessions] = useState<SessionData[]>(() => loadSessions());
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const selectedDrill = drills.find((d) => d.id === selectedDrillId) ?? null;
   const selectedRange = selectedDrill ? ranges.find((r) => r.id === selectedDrill.rangeId) ?? null : null;
@@ -247,8 +249,8 @@ export default function Trainer() {
       <meta property="og:description" content="Practice your preflop ranges with interactive drills." />
       <meta property="og:url" content="https://trainer.grindsafe.app/trainer" />
     </Helmet>
-    <div className="flex gap-5 h-full px-6 py-5">
-      <aside className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto border-r border-border pr-4">
+    <div className="flex flex-col lg:flex-row gap-3 lg:gap-5 h-full px-3 md:px-6 py-3 md:py-5">
+      <aside className="hidden lg:flex w-80 flex-shrink-0 flex-col gap-4 overflow-y-auto border-r border-border pr-4">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Drills</span>
@@ -279,8 +281,8 @@ export default function Trainer() {
               onDeleteFolder={deleteDrillFolder}
               onRenameFolder={renameDrillFolder}
               selectedItemId={selectedDrillId}
-              onSelectItem={(item) => { const d = drills.find((x) => x.id === item.id); if (d) selectDrill(d); }}
-              onEditItem={(id) => { const d = drills.find((x) => x.id === id); if (d) editDrill(d); }}
+              onSelectItem={(item) => { const d = drills.find((x) => x.id === item.id); if (d) { selectDrill(d); setSidebarOpen(false); } }}
+              onEditItem={(id) => { const d = drills.find((x) => x.id === id); if (d) editDrill(d); setSidebarOpen(false); }}
               onDeleteItem={(id) => { onDeleteDrill(id); if (selectedDrillId === id) { setSelectedDrillId(null); setView("drills"); } }}
               renderItem={(item) => {
                 const d = drills.find((x) => x.id === item.id);
@@ -342,6 +344,70 @@ export default function Trainer() {
         )}
       </aside>
 
+      {/* Mobile drills toggle */}
+      <div className="flex lg:hidden items-center gap-2">
+        <Drawer open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <DrawerTrigger asChild>
+            <button className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">
+              <FolderOpen size={14} /> Drills
+            </button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Drills</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-6 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <button onClick={() => newDrillFolder(null)} className="text-muted-foreground hover:text-primary transition-colors" title="New folder"><FolderPlus size={14} /></button>
+                <button onClick={() => { startNewDrill(); setSidebarOpen(false); }} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"><Plus size={11} /> New</button>
+              </div>
+              <FolderTree
+                items={drills}
+                folders={drillFolders}
+                onMoveItem={onMoveDrill}
+                onMoveFolder={moveDrillFolder}
+                allFolders={drillFolders}
+                onDeleteFolder={deleteDrillFolder}
+                onRenameFolder={renameDrillFolder}
+                selectedItemId={selectedDrillId}
+                onSelectItem={(item) => { const d = drills.find((x) => x.id === item.id); if (d) { selectDrill(d); setSidebarOpen(false); } }}
+                onEditItem={(id) => { const d = drills.find((x) => x.id === id); if (d) editDrill(d); setSidebarOpen(false); }}
+                onDeleteItem={(id) => { onDeleteDrill(id); if (selectedDrillId === id) { setSelectedDrillId(null); setView("drills"); } }}
+                renderItem={(item) => {
+                  const d = drills.find((x) => x.id === item.id);
+                  const active = item.id === selectedDrillId;
+                  const drillSessions = sessions.filter((s) => s.drillId === item.id && s.endedAt !== null);
+                  const totalCorrect = drillSessions.reduce((sum, s) => sum + s.correct, 0);
+                  const totalHands = drillSessions.reduce((sum, s) => sum + s.total, 0);
+                  const avg = totalHands > 0 ? ((totalCorrect / totalHands) * 100).toFixed(1) : null;
+                  return (
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col min-w-0">
+                        <span className={`text-xs font-medium truncate ${active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
+                        {d && (
+                          <span className="text-[9px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            {d.numPlayers}p · {d.heroPosition}
+                          </span>
+                        )}
+                        {avg && (
+                          <span className="text-[9px]" style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            color: parseFloat(avg) >= 80 ? "#22c55e" : parseFloat(avg) >= 60 ? "#fbbf24" : "#ef4444",
+                          }}>
+                            Avg. {avg}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }}
+                emptyMessage="No drills yet — create one to get started."
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </div>
+
       <div className="flex-1 overflow-y-auto min-w-0">
 
         {view === "drills" && (
@@ -376,20 +442,20 @@ export default function Trainer() {
         )}
 
         {(view === "preview" || view === "training") && selectedDrill && viewingSession && (
-          <div className="flex flex-col gap-6 h-full overflow-y-auto">
+          <div className="flex flex-col gap-4 lg:gap-6 h-full overflow-y-auto">
             <button onClick={backToTraining} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors self-start">
               ← Back
             </button>
-            <div className="bg-card rounded-xl border border-border p-5">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-card rounded-xl border border-border p-4 lg:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Session Details</h3>
+                  <h3 className="text-base lg:text-lg font-semibold text-foreground">Session Details</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {formatDate(viewingSession.startedAt)} — {viewingSession.endedAt ? formatDate(viewingSession.endedAt) : "In progress"}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold" style={{
+                  <p className="text-2xl lg:text-3xl font-bold" style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     color: viewingSession.total > 0 && (viewingSession.correct / viewingSession.total) >= 0.8 ? "#22c55e" : viewingSession.total > 0 && (viewingSession.correct / viewingSession.total) >= 0.6 ? "#fbbf24" : "#ef4444",
                   }}>
@@ -398,14 +464,16 @@ export default function Trainer() {
                   <p className="text-xs text-muted-foreground">{viewingSession.correct}/{viewingSession.total} correct</p>
                 </div>
               </div>
-              <div className="flex gap-6">
-                <div className="flex-1 min-w-0">
+              <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+                <div className="flex-1 min-w-0 overflow-x-auto">
                   <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Per-Combo Accuracy</h4>
-                  <SessionGrid comboStats={viewingSession.comboStats} />
+                  <div className="min-w-[300px]">
+                    <SessionGrid comboStats={viewingSession.comboStats} />
+                  </div>
                 </div>
-                <div className="w-48 flex-shrink-0">
+                <div className="w-full lg:w-48 flex-shrink-0">
                   <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Combo Breakdown</h4>
-                  <div className="flex flex-col gap-1 max-h-96 overflow-y-auto">
+                  <div className="flex flex-col gap-1 max-h-48 lg:max-h-96 overflow-y-auto">
                     {Object.entries(viewingSession.comboStats)
                       .sort(([, a], [, b]) => (b.correct / b.total) - (a.correct / a.total))
                       .map(([hand, cs]) => {
@@ -427,20 +495,20 @@ export default function Trainer() {
         )}
 
         {view === "preview" && selectedDrill && !viewingSession && (
-          <div className="flex gap-6 h-full">
-            <div className="flex-[7] flex flex-col gap-4 min-w-0">
-              <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-full">
+            <div className="flex-1 lg:flex-[7] flex flex-col gap-3 lg:gap-4 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground">{selectedDrill.name}</h2>
+                  <h2 className="text-base lg:text-lg font-semibold text-foreground">{selectedDrill.name}</h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {selectedRange ? `${selectedRange.name} · ` : ""}{selectedDrill.numPlayers}p · {selectedDrill.heroPosition}
                   </p>
                 </div>
-                <button onClick={goToTraining} className="px-5 py-2 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
+                <button onClick={goToTraining} className="px-5 py-2 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors self-start sm:self-auto">
                   Start Training
                 </button>
               </div>
-              <div className="bg-card rounded-xl border border-border p-6 flex items-center justify-center flex-1">
+              <div className="bg-card rounded-xl border border-border p-4 lg:p-6 flex items-center justify-center flex-1 min-h-[200px]">
                 <PokerTable
                   positions={getPositions(selectedDrill.numPlayers)}
                   heroPosition={selectedDrill.heroPosition}
@@ -450,7 +518,7 @@ export default function Trainer() {
               </div>
             </div>
 
-            <div className="flex-[3] flex flex-col gap-4 min-w-0">
+            <div className="flex-1 lg:flex-[3] flex flex-col gap-3 lg:gap-4 min-w-0">
               {(() => {
                 const drillSessions = sessions
                   .filter((s) => s.drillId === selectedDrill.id && s.endedAt !== null)
@@ -522,7 +590,7 @@ export default function Trainer() {
 
         {view === "training" && selectedDrill && !viewingSession && (
           phase === "idle" ? (
-            <div className="flex flex-col items-center justify-center h-full gap-8">
+            <div className="flex flex-col items-center justify-center h-full gap-6 lg:gap-8 px-2">
               <div className="text-center space-y-4">
                 <p className="text-sm text-muted-foreground">
                   {!selectedRange
@@ -531,9 +599,9 @@ export default function Trainer() {
                 </p>
                 {activeSession ? (
                   <div className="flex flex-col items-center gap-4">
-                    <div className="bg-card rounded-xl border border-border p-5 text-center min-w-60">
+                    <div className="bg-card rounded-xl border border-border p-5 text-center min-w-60 w-full max-w-xs">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Active Session</p>
-                      <p className="text-4xl font-bold" style={{
+                      <p className="text-3xl lg:text-4xl font-bold" style={{
                         fontFamily: "'JetBrains Mono', monospace",
                         color: parseFloat(accuracy!) >= 80 ? "#22c55e" : parseFloat(accuracy!) >= 60 ? "#fbbf24" : "#ef4444",
                       }}>
@@ -556,8 +624,8 @@ export default function Trainer() {
               </div>
             </div>
           ) : (
-            <div className="flex gap-6 h-full">
-              <div className="flex-[7] flex flex-col items-center justify-center gap-6 min-w-0 relative">
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-full">
+              <div className="flex-1 lg:flex-[7] flex flex-col items-center justify-center gap-4 lg:gap-6 min-w-0 relative">
                 {selectedRange && (
                   <div className="absolute -top-1 -left-1 z-10 flex flex-col items-start gap-1">
                     <button onClick={() => setRevealGrid((v) => !v)} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors bg-card/80 px-1.5 py-0.5 rounded">
@@ -581,12 +649,12 @@ export default function Trainer() {
                         betSizes={selectedDrill.betSizes}
                       />
                     </div>
-                    <div className="flex justify-center w-full">
-                      <div className="grid grid-cols-3 gap-3 max-w-lg w-full">
+                    <div className="flex justify-center w-full px-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 max-w-lg w-full">
                         {rangeActions.map((a) => (
                           <button key={a.id} onClick={() => answer(a.id)} disabled={userAnswer !== null}
                             style={getActionStyle(a)}
-                            className="py-3 rounded-full border font-semibold text-sm hover:brightness-125 transition-all active:scale-95 truncate px-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:brightness-75">
+                            className="py-2.5 sm:py-3 rounded-full border font-semibold text-xs sm:text-sm hover:brightness-125 transition-all active:scale-95 truncate px-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:brightness-75">
                             {a.label}
                           </button>
                         ))}
@@ -596,10 +664,10 @@ export default function Trainer() {
                 )}
               </div>
 
-              <div className="flex-[3] flex flex-col gap-4 min-w-0">
+              <div className="flex-1 lg:flex-[3] flex flex-col gap-3 lg:gap-4 min-w-0">
                 <div className="bg-card rounded-xl border border-border p-4 text-center">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Session Accuracy</p>
-                  <p className="text-3xl font-bold" style={{
+                  <p className="text-2xl lg:text-3xl font-bold" style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     color: accuracy ? (parseFloat(accuracy) >= 80 ? "#22c55e" : parseFloat(accuracy) >= 60 ? "#fbbf24" : "#ef4444") : "var(--muted-foreground)",
                   }}>

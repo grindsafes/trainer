@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
-import { FolderPlus, Plus } from "lucide-react";
+import { FolderPlus, Plus, FolderOpen, BarChart3 } from "lucide-react";
 import { useTrainerContext } from "../TrainerContext";
 import { DEFAULT_ACTIONS, LEGACY_ACTIONS, COLOR_PRESETS } from "../constants";
 import { RangeGrid } from "../components/RangeGrid";
 import { ActionChip } from "../components/ActionChip";
 import { FolderTree } from "../components/FolderTree";
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "../components/ui/drawer";
 import type { Range, ActionDef } from "../types";
 
 export default function Builder() {
@@ -63,6 +64,8 @@ export default function Builder() {
 
   const filledCount = Object.keys(grid).length;
   const actionCounts = actions.map((a) => ({ ...a, count: Object.values(grid).filter((v) => v === a.id).length })).filter((a) => a.count > 0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
 
   return (
     <>
@@ -73,8 +76,9 @@ export default function Builder() {
       <meta property="og:description" content="Build custom preflop ranges with the interactive hand matrix." />
       <meta property="og:url" content="https://trainer.grindsafe.app/charts" />
     </Helmet>
-    <div className="flex gap-5 h-full px-6 py-5">
-      <aside className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto border-r border-border pr-4">
+    <div className="flex flex-col lg:flex-row gap-3 lg:gap-5 h-full px-3 md:px-6 py-3 md:py-5">
+
+      <aside className="hidden lg:flex w-80 flex-shrink-0 flex-col gap-4 overflow-y-auto border-r border-border pr-4">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ranges</span>
@@ -93,7 +97,7 @@ export default function Builder() {
             onDeleteFolder={deleteRangeFolder}
             onRenameFolder={renameRangeFolder}
             selectedItemId={editingId}
-            onSelectItem={(item) => { const r = ranges.find((x) => x.id === item.id); if (r) loadRange(r); }}
+            onSelectItem={(item) => { const r = ranges.find((x) => x.id === item.id); if (r) loadRange(r); setSidebarOpen(false); }}
             onDuplicateItem={onDuplicateRange}
             onDeleteItem={(id) => { onDeleteRange(id); if (editingId === id) newRange(); }}
             renderItem={(item) => {
@@ -112,14 +116,59 @@ export default function Builder() {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col gap-4 min-w-0">
-        <div className="flex items-center gap-3">
-          <input value={rangeName} onChange={(e) => setRangeName(e.target.value)} className="flex-1 bg-secondary text-foreground text-sm font-medium px-3 py-2 rounded-md border border-border focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Range name..." />
-          <button onClick={() => setGrid({})} className="text-xs px-3 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">Clear</button>
-          <button onClick={saveRange} className="text-xs px-4 py-2 rounded-full bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors">Save</button>
+      <div className="flex-1 flex flex-col gap-3 lg:gap-4 min-w-0">
+        <div className="flex items-center gap-2 lg:hidden">
+          <Drawer open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <DrawerTrigger asChild>
+              <button className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">
+                <FolderOpen size={14} /> Ranges
+              </button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Ranges</DrawerTitle>
+              </DrawerHeader>
+              <div className="px-4 pb-6 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => newRangeFolder(null)} className="text-muted-foreground hover:text-primary transition-colors" title="New folder"><FolderPlus size={14} /></button>
+                  <button onClick={() => { newRange(); setSidebarOpen(false); }} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"><Plus size={11} /> New</button>
+                </div>
+                <FolderTree
+                  items={ranges}
+                  folders={rangeFolders}
+                  onMoveItem={onMoveRange}
+                  onMoveFolder={moveRangeFolder}
+                  allFolders={rangeFolders}
+                  onDeleteFolder={deleteRangeFolder}
+                  onRenameFolder={renameRangeFolder}
+                  selectedItemId={editingId}
+                  onSelectItem={(item) => { const r = ranges.find((x) => x.id === item.id); if (r) loadRange(r); setSidebarOpen(false); }}
+                  onDuplicateItem={onDuplicateRange}
+                  onDeleteItem={(id) => { onDeleteRange(id); if (editingId === id) newRange(); }}
+                  renderItem={(item) => {
+                    const sel = item.id === editingId;
+                    return (
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-xs font-medium truncate ${sel ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>{item.name}</span>
+                          <span className="text-[9px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>RANGE</span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
 
-        <div className="flex gap-3 flex-wrap items-center">
+        <div className="flex items-center gap-2 lg:gap-3">
+          <input value={rangeName} onChange={(e) => setRangeName(e.target.value)} className="flex-1 min-w-0 bg-secondary text-foreground text-sm font-medium px-3 py-2 rounded-md border border-border focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Range name..." />
+          <button onClick={() => setGrid({})} className="text-xs px-3 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors whitespace-nowrap">Clear</button>
+          <button onClick={saveRange} className="text-xs px-4 py-2 rounded-full bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors whitespace-nowrap">Save</button>
+        </div>
+
+        <div className="flex gap-2 lg:gap-3 overflow-x-auto flex-wrap items-center pb-1">
           {actions.map((a, index) => (
             <ActionChip
               key={a.id}
@@ -142,16 +191,19 @@ export default function Builder() {
             />
           ))}
           <button onClick={() => { const id = newActionId(); const preset = COLOR_PRESETS[actions.length % COLOR_PRESETS.length]; setActions((prev) => [...prev, { id, label: "New Action", ...preset }]); setEditingLabelId(id); setEditLabel("New Action"); }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-border text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors">
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-border text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors">
             <Plus size={14} /> Add action
           </button>
         </div>
 
-        <div className="flex-1 flex gap-5 min-h-0">
-          <div className="flex-1 overflow-y-auto">
-            <RangeGrid grid={grid} actions={actions} selectedAction={selectedAction} onPaint={paint} />
+        <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-5 min-h-0">
+          <div className="flex-1 overflow-x-auto overflow-y-auto min-w-0">
+            <div className="min-w-[300px]">
+              <RangeGrid grid={grid} actions={actions} selectedAction={selectedAction} onPaint={paint} />
+            </div>
           </div>
-          <div className="w-36 flex-shrink-0 flex flex-col gap-3">
+
+          <div className="hidden lg:flex w-36 flex-shrink-0 flex-col gap-3">
             <div className="bg-card rounded-md border border-border p-3 text-center">
               <p className="text-2xl font-bold text-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{filledCount}</p>
               <p className="text-xs text-muted-foreground mt-0.5">hands assigned</p>
@@ -166,6 +218,36 @@ export default function Builder() {
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="lg:hidden flex justify-center">
+          <Drawer open={statsOpen} onOpenChange={setStatsOpen}>
+            <DrawerTrigger asChild>
+              <button className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors">
+                <BarChart3 size={14} /> Stats
+              </button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Range Stats</DrawerTitle>
+              </DrawerHeader>
+              <div className="px-4 pb-6 flex flex-col gap-4">
+                <div className="bg-card rounded-md border border-border p-4 text-center">
+                  <p className="text-3xl font-bold text-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{filledCount}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">hands assigned</p>
+                  <p className="text-xs text-muted-foreground">{((filledCount / 169) * 100).toFixed(1)}% of range</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {actionCounts.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between text-sm px-2">
+                      <span style={{ color: a.color }} className="font-medium truncate mr-2">{a.label}</span>
+                      <span className="text-muted-foreground flex-shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{a.count} ({(a.count / 169 * 100).toFixed(1)}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
     </div>

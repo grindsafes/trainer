@@ -82,7 +82,7 @@ export default function Community() {
       <meta property="og:url" content="https://trainer.grindsafe.app/community" />
     </Helmet>
     <div className="flex flex-col h-full overflow-y-auto">
-      <div className="relative overflow-hidden text-white px-8 min-h-[40vh] flex items-center justify-center text-center">
+      <div className="relative overflow-hidden text-white px-4 md:px-8 min-h-[30vh] md:min-h-[40vh] flex items-center justify-center text-center">
         <video
           autoPlay
           loop
@@ -93,9 +93,9 @@ export default function Community() {
           <source src="/hero-bg.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/60" />
-        <div className="relative z-10 py-10">
-          <h1 className="text-4xl font-bold mb-4">Welcome to GrindSafe</h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+        <div className="relative z-10 py-6 md:py-10">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 md:mb-4">Welcome to GrindSafe</h1>
+          <p className="text-sm sm:text-base md:text-lg text-gray-300 max-w-2xl mx-auto px-2">
             A community-driven trainer built by and for poker players.
             Create, study, and master your preflop ranges with interactive drills
             and detailed analytics.
@@ -103,9 +103,9 @@ export default function Community() {
         </div>
       </div>
 
-      <div className="flex-1 px-8 py-10">
-        <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div className="space-y-12">
+      <div className="flex-1 px-4 md:px-8 py-6 md:py-10">
+        <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
+          <div className="space-y-8 md:space-y-12">
             <section>
               <h2 className="text-xl font-semibold mb-3">About Us</h2>
               <p className="text-muted-foreground max-w-3xl leading-relaxed">

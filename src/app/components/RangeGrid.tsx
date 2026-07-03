@@ -17,6 +17,7 @@ export function RangeGrid({
   grid, actions, selectedAction, onPaint, readOnly = false, highlightHand, compact = false,
 }: RangeGridProps) {
   const isPainting = useRef(false);
+  const gridRef = useRef<HTMLDivElement>(null);
   const actionMap = Object.fromEntries(actions.map((a) => [a.id, a]));
 
   const handleMouseDown = useCallback((hand: string) => {
@@ -36,8 +37,37 @@ export function RangeGrid({
     return () => window.removeEventListener("mouseup", stop);
   }, []);
 
+  const getHandFromTouch = useCallback((e: React.TouchEvent) => {
+    if (!gridRef.current || readOnly) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+    const cell = el?.closest("[data-hand]") as HTMLElement | null;
+    if (cell?.dataset.hand) {
+      onPaint(cell.dataset.hand);
+    }
+  }, [readOnly, onPaint]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (readOnly) return;
+    isPainting.current = true;
+    getHandFromTouch(e);
+  }, [readOnly, getHandFromTouch]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (readOnly || !isPainting.current) return;
+    getHandFromTouch(e);
+  }, [readOnly, getHandFromTouch]);
+
+  const handleTouchEnd = useCallback(() => {
+    isPainting.current = false;
+  }, []);
+
   return (
-    <div className="select-none" style={{ display: "grid", gridTemplateColumns: "repeat(13, 1fr)", gap: "2px" }}>
+    <div className="select-none" ref={gridRef} style={{ display: "grid", gridTemplateColumns: "repeat(13, 1fr)", gap: "2px" }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {RANKS.map((_, row) =>
         RANKS.map((_, col) => {
           const hand = getHandLabel(row, col);
@@ -52,6 +82,7 @@ export function RangeGrid({
           return (
             <div
               key={hand}
+              data-hand={hand}
               title={action ? `${hand} → ${action.label}` : hand}
               onMouseDown={() => handleMouseDown(hand)}
               onMouseEnter={() => handleMouseEnter(hand)}
