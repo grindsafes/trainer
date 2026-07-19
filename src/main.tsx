@@ -24,8 +24,8 @@ createRoot(document.getElementById("root")!).render(
               <Route index element={<Navigate to="/community" replace />} />
               <Route path="community" element={<Community />} />
               <Route path="charts" element={<Builder />} />
-              <Route path="trainer" element={<Trainer />} />
               <Route path="lines" element={<Lines />} />
+              <Route path="trainer" element={<Trainer />} />
             </Route>
           </Routes>
         </BrowserRouter>

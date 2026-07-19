@@ -28,7 +28,7 @@ export default function App() {
         </div>
 
         <nav className="hidden lg:flex gap-1">
-          {(["community", "charts", "trainer", "lines"] as const).map((t) => (
+                  {(["community", "charts", "lines", "trainer"] as const).map((t) => (
             <NavLink
               key={t}
               to={`/${t}`}
@@ -80,7 +80,7 @@ export default function App() {
               </DrawerHeader>
               <div className="px-4 pb-6 flex flex-col gap-3">
                 <nav className="flex flex-col gap-1">
-                  {(["community", "charts", "trainer", "lines"] as const).map((t) => (
+          {(["community", "charts", "lines", "trainer"] as const).map((t) => (
                     <NavLink
                       key={t}
                       to={`/${t}`}
