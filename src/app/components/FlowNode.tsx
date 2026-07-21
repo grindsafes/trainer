@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import { Handle, Position, useReactFlow, type NodeProps } from "@xyflow/react";
 import type { LineNodeData } from "../types";
 
@@ -45,16 +45,60 @@ const ACTION_LABELS: Record<string, string> = {
   allin: "All-in",
 };
 
-export const RootNode = memo(({ data, selected }: NodeProps<LineNodeData>) => (
-  <div
-    className={`px-5 py-3 rounded-xl border-2 bg-foreground text-background dark:bg-white dark:text-black font-bold text-sm tracking-wide shadow-md transition-shadow ${
-      selected ? "shadow-lg ring-2 ring-primary" : ""
-    }`}
-  >
-    <Handle type="source" position={Position.Bottom} className="!bg-foreground dark:!bg-white" />
-    {data.label || "New Scenario"}
-  </div>
-));
+export const RootNode = memo(({ id, data, selected }: NodeProps<LineNodeData>) => {
+  const { updateNodeData } = useReactFlow();
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(data.label || "");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commitRename = useCallback(() => {
+    const val = editValue.trim();
+    if (val && val !== data.label) {
+      updateNodeData(id, { label: val });
+    }
+    setEditing(false);
+  }, [editValue, data.label, id, updateNodeData]);
+
+  const startEditing = useCallback(() => {
+    setEditValue(data.label || "");
+    setEditing(true);
+    requestAnimationFrame(() => inputRef.current?.select());
+  }, [data.label]);
+
+  const stopPropagation = useCallback((e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  return (
+    <div
+      className={`px-5 py-3 rounded-xl border-2 bg-foreground text-background dark:bg-white dark:text-black font-bold text-sm tracking-wide shadow-md transition-shadow ${
+        selected ? "shadow-lg ring-2 ring-primary" : ""
+      }`}
+    >
+      <Handle type="source" position={Position.Bottom} className="!bg-foreground dark:!bg-white" />
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitRename();
+            if (e.key === "Escape") setEditing(false);
+            e.stopPropagation();
+          }}
+          onPointerDown={stopPropagation}
+          className="bg-transparent text-background dark:text-black outline-none w-full min-w-[80px]"
+        />
+      ) : (
+        <span onDoubleClick={startEditing} className="cursor-pointer">
+          {data.label || "New Scenario"}
+        </span>
+      )}
+    </div>
+  );
+});
 
 const BET_SIZE_RE = /^\d+(\.\d+)?%$/;
 
@@ -94,7 +138,6 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps<LineNodeData>)
             className="flex-1 text-[11px] font-semibold rounded px-1.5 py-1 border bg-background text-foreground border-border focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
           >
             {(["check", "bet", "raise", "call", "fold", "allin"] as const)
-              .filter((at) => data.actor !== "villain" || at !== "check")
               .map((at) => (
               <option key={at} value={at}>{ACTION_LABELS[at]}</option>
             ))}
@@ -103,11 +146,7 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps<LineNodeData>)
             value={data.actor}
             onChange={(e) => {
               const newActor = e.target.value as LineNodeData["actor"];
-              const updates: Partial<LineNodeData> = { actor: newActor };
-              if (newActor === "villain" && data.actionType === "check") {
-                updates.actionType = "fold";
-              }
-              updateNodeData(id, updates);
+              updateNodeData(id, { actor: newActor });
             }}
             onPointerDown={stopPropagation}
             className="text-[10px] rounded px-1.5 py-1 border bg-background text-muted-foreground border-border focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer uppercase"
@@ -139,17 +178,15 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps<LineNodeData>)
             />
           </div>
         )}
-        {data.actor !== "villain" && (
-          <label className="flex items-center gap-1.5 cursor-pointer" onPointerDown={stopPropagation}>
-            <input
-              type="checkbox"
-              checked={data.correct ?? false}
-              onChange={(e) => updateNodeData(id, { correct: e.target.checked })}
-              className="accent-green-600 w-3 h-3"
-            />
-            <span className="text-[9px] text-muted-foreground">Correct</span>
-          </label>
-        )}
+        <label className="flex items-center gap-1.5 cursor-pointer" onPointerDown={stopPropagation}>
+          <input
+            type="checkbox"
+            checked={data.correct ?? false}
+            onChange={(e) => updateNodeData(id, { correct: e.target.checked })}
+            className="accent-green-600 w-3 h-3"
+          />
+          <span className="text-[9px] text-muted-foreground">Correct</span>
+        </label>
         {data.actor === "villain" && (
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">Weight</span>

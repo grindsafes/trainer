@@ -704,18 +704,29 @@ function SidebarContent({
                   </span>
                   <div className="flex flex-col gap-2">
                     {isRootNode && (
-                      <div>
-                        <label className="text-[10px] text-muted-foreground block mb-0.5">Street</label>
-                        <select
-                          value={selectedNode.data.street}
-                          onChange={(e) => onUpdateNodeData({ street: e.target.value as LineNodeData["street"] })}
-                          className="w-full bg-secondary text-foreground text-xs px-2 py-1.5 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          {STREETS.map((s) => (
-                            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground block mb-0.5">Label</label>
+                          <input
+                            type="text"
+                            value={selectedNode.data.label || ""}
+                            onChange={(e) => onUpdateNodeData({ label: e.target.value })}
+                            className="w-full bg-secondary text-foreground text-xs px-2 py-1.5 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground block mb-0.5">Street</label>
+                          <select
+                            value={selectedNode.data.street}
+                            onChange={(e) => onUpdateNodeData({ street: e.target.value as LineNodeData["street"] })}
+                            className="w-full bg-secondary text-foreground text-xs px-2 py-1.5 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            {STREETS.map((s) => (
+                              <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
                     )}
                     {(isStreetGroup || isStreet) && (
                       <div>
