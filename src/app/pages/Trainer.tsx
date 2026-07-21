@@ -618,6 +618,20 @@ export default function Trainer() {
     });
   }
 
+  function getPathActionsByStreet(path: string[]): { flop: string[]; turn: string[]; river: string[] } {
+    const result: { flop: string[]; turn: string[]; river: string[] } = { flop: [], turn: [], river: [] };
+    for (const nodeId of path) {
+      const n = lineTreeNodes.find(nd => nd.id === nodeId);
+      if (!n || !n.data.actionType) continue;
+      const street = n.data.street;
+      if (street === 'preflop') continue;
+      let label = n.data.actionType.charAt(0).toUpperCase() + n.data.actionType.slice(1);
+      if (n.data.betSize) label += ` ${n.data.betSize}`;
+      result[street].push(label);
+    }
+    return result;
+  }
+
   function getPathKey(path: string[]): string {
     return path.join("|");
   }
@@ -1408,8 +1422,8 @@ export default function Trainer() {
                 </button>
               </div>
 
-              <div className="bg-card rounded-xl border border-border p-4 flex-1">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Path Accuracy</h3>
+              <div className="bg-card rounded-xl border border-border p-4 flex-1 flex flex-col min-h-0">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 flex-shrink-0">Path Accuracy</h3>
                 {(() => {
                   const selectedDrillSessions = lineSessions
                     .filter((s) => s.lineDrillId === selectedLineDrill.id && s.endedAt !== null);
@@ -1432,23 +1446,28 @@ export default function Trainer() {
                     return <p className="text-xs text-muted-foreground">No training data yet.</p>;
                   }
                   return (
-                    <div className="max-h-60 overflow-y-auto">
+                    <div className="overflow-y-auto flex-1 min-h-0">
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="text-[10px]">Path</TableHead>
+                              <TableHead className="text-[10px] text-center">Flop</TableHead>
+                              <TableHead className="text-[10px] text-center">Turn</TableHead>
+                              <TableHead className="text-[10px] text-center">River</TableHead>
                               <TableHead className="text-[10px] text-right">%</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {entries.map(([key, ps]) => {
+                              const pathNodeIds = key.split("|");
+                              const streetActions = getPathActionsByStreet(pathNodeIds);
                               const pct = (ps.correct / ps.total) * 100;
-                              const desc = ps.pathLabels.length >= 2
-                                ? ps.pathLabels.slice(1).join(" → ")
-                                : "Unknown path";
                               return (
                                 <TableRow key={key}>
-                                  <TableCell className="truncate max-w-[200px] font-medium" title={desc}>{desc}</TableCell>
+                                  {(['flop', 'turn', 'river'] as const).map(street => (
+                                    <TableCell key={street} className="text-center text-[10px] truncate max-w-[120px] font-medium">
+                                      {streetActions[street].length > 0 ? streetActions[street].join(" → ") : <span className="text-muted-foreground">—</span>}
+                                    </TableCell>
+                                  ))}
                                   <TableCell className="text-right font-mono font-medium" style={{
                                     color: pct >= 80 ? "#22c55e" : pct >= 60 ? "#fbbf24" : "#ef4444",
                                   }}>
@@ -1608,7 +1627,9 @@ export default function Trainer() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-[10px]">Path</TableHead>
+                          <TableHead className="text-[10px] text-center">Flop</TableHead>
+                          <TableHead className="text-[10px] text-center">Turn</TableHead>
+                          <TableHead className="text-[10px] text-center">River</TableHead>
                           <TableHead className="text-[10px] text-right">%</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1617,14 +1638,17 @@ export default function Trainer() {
                           const entries = Object.entries(currentLineSession.pathStats!)
                             .sort((a, b) => (a[1].correct / a[1].total) - (b[1].correct / b[1].total));
                           return entries.map(([key, ps]) => {
+                            const pathNodeIds = key.split("|");
+                            const streetActions = getPathActionsByStreet(pathNodeIds);
                             const pct = (ps.correct / ps.total) * 100;
-                            const desc = ps.pathLabels.length >= 2
-                              ? ps.pathLabels.slice(1).join(" → ")
-                              : "Unknown path";
                             const isCurrentPath = key === getPathKey(paths[currentPathIndex] ?? []);
                             return (
                               <TableRow key={key} data-state={isCurrentPath ? "selected" : undefined}>
-                                <TableCell className="truncate max-w-[160px] font-medium" title={desc}>{desc}</TableCell>
+                                {(['flop', 'turn', 'river'] as const).map(street => (
+                                  <TableCell key={street} className="text-center text-[10px] truncate max-w-[120px] font-medium">
+                                    {streetActions[street].length > 0 ? streetActions[street].join(" → ") : <span className="text-muted-foreground">—</span>}
+                                  </TableCell>
+                                ))}
                                 <TableCell className="text-right font-mono font-medium" style={{
                                   color: pct >= 80 ? "#22c55e" : pct >= 60 ? "#fbbf24" : "#ef4444",
                                 }}>
