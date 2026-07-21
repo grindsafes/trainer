@@ -220,7 +220,19 @@ export default function Trainer() {
       };
     }
 
-    // Auto-skip street nodes: they carry boardCards but aren't decision points
+    // Auto-skip street nodes with no runout branching
+    if (isCurrentStreet) {
+      const nextStep = currentStepIndex + 1;
+      const isLastStep = nextStep >= (paths[currentPathIndex]?.length ?? 0);
+      if (isLastStep) {
+        advanceLinePath();
+      } else {
+        setCurrentStepIndex(nextStep);
+      }
+      return;
+    }
+
+    // Auto-skip when all children are streets (non-street parent)
     if (children.length > 0 && nonStreetChildren.length === 0) {
       const nextStep = currentStepIndex + 1;
       const isLastStep = nextStep >= (paths[currentPathIndex]?.length ?? 0);
@@ -687,7 +699,7 @@ export default function Trainer() {
     setCurrentLineSessionId(newSession.id);
     setCurrentFlopNodeId(initialFlopId);
     const flopNode = freshNodes.find(n => n.id === initialFlopId);
-    setHeroHand(flopNode?.data.heroCards ?? null);
+    setHeroHand(flopNode?.data.heroCards ? flopNode.data.heroCards.replace(/,/g, "") : null);
     setView("line-drill-training");
     const initialPathIdx = initialFlopId
       ? generated.findIndex(p => !shouldSkipPath(p, initialFlopId))
@@ -748,7 +760,7 @@ export default function Trainer() {
           : [...usedIds, candidate];
         setCurrentFlopNodeId(candidate);
         const flopNode = lineTreeNodes.find(n => n.id === candidate);
-        setHeroHand(flopNode?.data.heroCards ?? null);
+        setHeroHand(flopNode?.data.heroCards ? flopNode.data.heroCards.replace(/,/g, "") : null);
         if (latestSession) {
           const updated = latestSessions.map(s =>
             s.id === latestSession.id
