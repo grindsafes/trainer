@@ -752,6 +752,26 @@ function SidebarContent({
                         onChange={(cards) => onUpdateNodeData({ boardCards: cards })}
                       />
                     )}
+                    {isStreet && selectedNode.data.street === "flop" && (
+                      <HeroCardSelector
+                        boardCards={selectedNode.data.boardCards ?? ""}
+                        heroCards={selectedNode.data.heroCards ?? ""}
+                        onChange={(cards) => onUpdateNodeData({ heroCards: cards })}
+                      />
+                    )}
+                    {isStreet && selectedNode.data.street !== "preflop" && (
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-0.5">Weight (for runout randomization)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={selectedNode.data.weight ?? ""}
+                          onChange={(e) => onUpdateNodeData({ weight: e.target.value === "" ? undefined : Number(e.target.value) })}
+                          className="w-full bg-secondary text-foreground text-xs px-2 py-1.5 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                    )}
                     {isActionNode && (
                       <p className="text-[10px] text-muted-foreground italic">
                         Edit action parameters directly on the node
@@ -852,6 +872,83 @@ function CardSelector({ street, boardCards, onChange }: { street: string; boardC
         })}
       </div>
       <p className="text-[9px] text-muted-foreground mt-1">Select up to {maxCards} card{maxCards > 1 ? "s" : ""}; click again to remove</p>
+    </div>
+  );
+}
+
+function HeroCardSelector({ boardCards, heroCards, onChange }: { boardCards: string; heroCards: string; onChange: (cards: string) => void }) {
+  const boardList = boardCards ? boardCards.split(",").map(c => c.trim()).filter(Boolean) : [];
+  const selected = heroCards ? heroCards.split(",").map(c => c.trim()).filter(Boolean) : [];
+  const maxCards = 2;
+
+  const isCardAvailable = (card: string) => !boardList.includes(card);
+
+  function toggleCard(card: string) {
+    if (!isCardAvailable(card)) return;
+    const idx = selected.indexOf(card);
+    let next: string[];
+    if (idx >= 0) {
+      next = selected.filter((_, i) => i !== idx);
+    } else {
+      if (selected.length >= maxCards) return;
+      next = [...selected, card];
+    }
+    onChange(next.join(","));
+  }
+
+  return (
+    <div>
+      <label className="text-[10px] text-muted-foreground block mb-1.5">Hero Cards ({selected.length}/{maxCards})</label>
+      {selected.length > 0 && (
+        <div className="flex items-center gap-1 mb-2 justify-center">
+          {selected.map((card, i) => {
+            const rank = card[0].toUpperCase();
+            const suit = card[1]?.toLowerCase();
+            const color = SUIT_COLORS[suit] ?? "var(--card-foreground)";
+            return (
+              <div
+                key={i}
+                className="rounded border border-yellow-500/40 flex flex-col items-center justify-center cursor-pointer hover:opacity-70"
+                style={{ width: 52, height: 70, backgroundColor: "var(--card)" }}
+                onClick={() => toggleCard(card)}
+              >
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, color, lineHeight: 1 }}>{rank}</span>
+                <span style={{ fontSize: 13, color, lineHeight: 1 }}>{SUIT_SYMBOLS[suit] ?? "?"}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="grid grid-cols-4 gap-[6px] p-3">
+        {ALL_SUITS.map((suit) => {
+          return (
+            <div key={suit} className="flex flex-col gap-[3px]">
+              <span className="text-[10px] font-bold text-center text-muted-foreground">{SUIT_SYMBOLS[suit]}</span>
+              {ALL_RANKS.map((rank) => {
+                const card = `${rank}${suit}`;
+                const isSelected = selected.includes(card);
+                const isUnavailable = !isCardAvailable(card);
+                const color = SUIT_COLORS[suit];
+                return (
+                  <button
+                    key={card}
+                    onClick={() => toggleCard(card)}
+                    disabled={isUnavailable}
+                    className={`text-[14px] py-[6px] px-1 text-center font-bold font-mono transition-colors rounded ${
+                      isSelected ? "bg-primary text-primary-foreground" : isUnavailable ? "opacity-20 cursor-not-allowed" : "bg-background text-muted-foreground hover:bg-secondary"
+                    }`}
+                    style={isSelected ? {} : { color }}
+                    title={card}
+                  >
+                    {rank}{SUIT_SYMBOLS[suit]}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[9px] text-muted-foreground mt-1">Select up to 2 hole cards (board cards are excluded)</p>
     </div>
   );
 }

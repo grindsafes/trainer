@@ -212,6 +212,7 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps<LineNodeData>)
 export const StreetNode = memo(({ data, selected }: NodeProps<LineNodeData>) => {
   const sc = STREET_COLORS[data.street] ?? STREET_COLORS.flop;
   const cards = data.street !== "preflop" && data.boardCards ? parseBoardCards(data.boardCards) : [];
+  const heroCards = data.street !== "preflop" && data.heroCards ? parseBoardCards(data.heroCards) : [];
   return (
     <div
       className={`rounded-xl border-2 ${sc.bg} ${sc.border} transition-shadow ${
@@ -220,11 +221,29 @@ export const StreetNode = memo(({ data, selected }: NodeProps<LineNodeData>) => 
       style={{ minWidth: 200, minHeight: 80 }}
     >
       <Handle type="target" position={Position.Top} className="!bg-border" />
-      <div className={`px-3 py-1 rounded-t-xl border-b ${sc.headerBg} ${sc.border}`}>
+      <div className={`px-3 py-1 rounded-t-xl border-b ${sc.headerBg} ${sc.border} flex items-center justify-between`}>
         <span className={`text-[10px] font-bold uppercase tracking-widest ${sc.text}`}>
           {data.label || data.street}
         </span>
+        {data.weight !== undefined && data.weight > 0 && (
+          <span className="text-[9px] font-mono text-muted-foreground ml-2">w:{data.weight}%</span>
+        )}
       </div>
+      {heroCards.length > 0 && (
+        <div className="flex items-center gap-1 px-3 pt-2 justify-center">
+          {heroCards.map((c, i) => (
+            <div
+              key={`hero-${i}`}
+              className="rounded border border-yellow-500/40 flex flex-col items-center justify-center"
+              style={{ width: 24, height: 32, backgroundColor: "var(--card)" }}
+            >
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, color: c.color, lineHeight: 1 }}>{c.rank}</span>
+              <span style={{ fontSize: 7, color: c.color, lineHeight: 1 }}>{c.suit}</span>
+            </div>
+          ))}
+          <span className="text-[8px] text-muted-foreground ml-0.5">H</span>
+        </div>
+      )}
       {cards.length > 0 && (
         <div className="flex items-center gap-1 px-3 py-2 justify-center">
           {cards.map((c, i) => (

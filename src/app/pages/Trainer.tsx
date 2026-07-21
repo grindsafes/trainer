@@ -56,6 +56,7 @@ export default function Trainer() {
   const [currentLineSessionId, setCurrentLineSessionId] = useState<string | null>(null);
   const currentLineSessionRef = useRef<LineSessionData | null>(null);
   const [currentFlopNodeId, setCurrentFlopNodeId] = useState<string | null>(null);
+  const [heroHand, setHeroHand] = useState<string | null>(null);
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [flippingOut, setFlippingOut] = useState(false);
@@ -159,7 +160,65 @@ export default function Trainer() {
       return;
     }
 
+    const streetChildren = children.filter(c => c.data.nodeType === "street" || c.data.nodeType === "street-group");
     const nonStreetChildren = children.filter(c => c.data.nodeType !== "street" && c.data.nodeType !== "street-group");
+
+    // Check if this is a street node with branching runout alternatives
+    const isCurrentStreet = currentNode?.data.nodeType === "street" || currentNode?.data.nodeType === "street-group";
+
+    if (isCurrentStreet && streetChildren.length > 0) {
+      // Runout branching — weighted random selection among alternative board cards
+      const hasWeights = streetChildren.some(c => c.data.weight !== undefined && c.data.weight > 0);
+      const selectedChild: Node<LineNodeData> | undefined = hasWeights
+        ? weightedRandomSelect(streetChildren)
+        : streetChildren[Math.floor(Math.random() * streetChildren.length)];
+      if (!selectedChild) return;
+
+      let advancePathIdx = currentPathIndex;
+      let advanceStepIdx = currentStepIndex;
+      const currentPath = paths[currentPathIndex];
+      if (currentPath) {
+        const parentPos = currentPath.indexOf(currentPathNodeId);
+        if (parentPos >= 0) {
+          const expectedChild = currentPath[parentPos + 1];
+          if (expectedChild !== selectedChild.id) {
+            const newPathIdx = findPathContainingEdge(currentPathNodeId, selectedChild.id);
+            if (newPathIdx >= 0) {
+              advancePathIdx = newPathIdx;
+              const childPos = paths[newPathIdx].indexOf(selectedChild.id);
+              if (childPos >= 0) {
+                advanceStepIdx = childPos;
+              }
+            }
+          }
+        }
+      }
+
+      if (advancePathIdx !== currentPathIndex) {
+        setCurrentPathIndex(advancePathIdx);
+      }
+      if (advanceStepIdx !== currentStepIndex) {
+        setCurrentStepIndex(advanceStepIdx);
+      }
+
+      const nextStep = advanceStepIdx + 1;
+      const isLastStep = nextStep >= (paths[advancePathIdx]?.length ?? 0);
+
+      if (villainTimerRef.current) { clearTimeout(villainTimerRef.current); villainTimerRef.current = null; }
+
+      villainTimerRef.current = setTimeout(() => {
+        villainTimerRef.current = null;
+        if (isLastStep) {
+          advanceLinePath();
+        } else {
+          setCurrentStepIndex(nextStep);
+        }
+      }, 600);
+
+      return () => {
+        if (villainTimerRef.current) { clearTimeout(villainTimerRef.current); villainTimerRef.current = null; }
+      };
+    }
 
     // Auto-skip street nodes: they carry boardCards but aren't decision points
     if (children.length > 0 && nonStreetChildren.length === 0) {
@@ -627,6 +686,8 @@ export default function Trainer() {
     saveLineSessions(all);
     setCurrentLineSessionId(newSession.id);
     setCurrentFlopNodeId(initialFlopId);
+    const flopNode = freshNodes.find(n => n.id === initialFlopId);
+    setHeroHand(flopNode?.data.heroCards ?? null);
     setView("line-drill-training");
     const initialPathIdx = initialFlopId
       ? generated.findIndex(p => !shouldSkipPath(p, initialFlopId))
@@ -650,6 +711,7 @@ export default function Trainer() {
     setCurrentPathIndex(0);
     setCurrentStepIndex(0);
     setCurrentFlopNodeId(null);
+    setHeroHand(null);
   }
 
   function advanceLinePath() {
@@ -685,6 +747,8 @@ export default function Trainer() {
           ? [...new Set([...usedIds, currentFlopNodeId, candidate])]
           : [...usedIds, candidate];
         setCurrentFlopNodeId(candidate);
+        const flopNode = lineTreeNodes.find(n => n.id === candidate);
+        setHeroHand(flopNode?.data.heroCards ?? null);
         if (latestSession) {
           const updated = latestSessions.map(s =>
             s.id === latestSession.id
@@ -1399,6 +1463,7 @@ export default function Trainer() {
                       <PokerTable
                         positions={["BU", "BB"]}
                         heroPosition={selectedLineDrill.heroPosition}
+                        heroHand={heroHand}
                         boardCards={boardCards}
                         betSizes={betSizes}
                       />
