@@ -166,7 +166,7 @@ export default function Trainer() {
     // Check if this is a street node with branching runout alternatives
     const isCurrentStreet = currentNode?.data.nodeType === "street" || currentNode?.data.nodeType === "street-group";
 
-    if (isCurrentStreet && streetChildren.length > 0) {
+    if (isCurrentStreet && streetChildren.length > 1) {
       // Runout branching — weighted random selection among alternative board cards
       const hasWeights = streetChildren.some(c => c.data.weight !== undefined && c.data.weight > 0);
       const selectedChild: Node<LineNodeData> | undefined = hasWeights
@@ -220,8 +220,8 @@ export default function Trainer() {
       };
     }
 
-    // Auto-skip street nodes with no runout branching
-    if (isCurrentStreet) {
+    // Auto-skip street nodes with no actionable children
+    if (isCurrentStreet && nonStreetChildren.length === 0) {
       const nextStep = currentStepIndex + 1;
       const isLastStep = nextStep >= (paths[currentPathIndex]?.length ?? 0);
       if (isLastStep) {
@@ -232,8 +232,19 @@ export default function Trainer() {
       return;
     }
 
-    // Non-street node with all street children — runout branching point
-    if (nonStreetChildren.length === 0 && streetChildren.length > 0) {
+    // Non-street node with multiple street children — runout branching point
+    // Root is excluded — it auto-skips like a street node
+    if (nonStreetChildren.length === 0 && streetChildren.length > 1) {
+      if (currentNode?.data.nodeType === "root") {
+        const nextStep = currentStepIndex + 1;
+        const isLastStep = nextStep >= (paths[currentPathIndex]?.length ?? 0);
+        if (isLastStep) {
+          advanceLinePath();
+        } else {
+          setCurrentStepIndex(nextStep);
+        }
+        return;
+      }
       const hasWeights = streetChildren.some(c => c.data.weight !== undefined && c.data.weight > 0);
       const selectedChild: Node<LineNodeData> | undefined = hasWeights
         ? weightedRandomSelect(streetChildren)
@@ -284,6 +295,18 @@ export default function Trainer() {
       return () => {
         if (villainTimerRef.current) { clearTimeout(villainTimerRef.current); villainTimerRef.current = null; }
       };
+    }
+
+    // Non-street node with a single street child — linear flow, just advance
+    if (nonStreetChildren.length === 0 && streetChildren.length === 1) {
+      const nextStep = currentStepIndex + 1;
+      const isLastStep = nextStep >= (paths[currentPathIndex]?.length ?? 0);
+      if (isLastStep) {
+        advanceLinePath();
+      } else {
+        setCurrentStepIndex(nextStep);
+      }
+      return;
     }
 
     const isVillain = nonStreetChildren.length > 0 && nonStreetChildren.every(c => c.data.actor === 'villain');
@@ -562,6 +585,12 @@ export default function Trainer() {
     });
   }
 
+  function findDivergenceIndex(pathA: string[], pathB: string[]): number {
+    let i = 0;
+    while (i < pathA.length && i < pathB.length && pathA[i] === pathB[i]) i++;
+    return i;
+  }
+
   function weightedRandomSelect(children: Node<LineNodeData>[]): Node<LineNodeData> {
     const weights = children.map(c => c.data.weight ?? 1);
     const totalWeight = weights.reduce((sum, w) => sum + Math.max(0, w), 0);
@@ -789,6 +818,18 @@ export default function Trainer() {
       return;
     }
 
+    // Try the next path that shares the same flop before cycling to a new flop
+    if (currentFlopNodeId) {
+      const nextPathIdx = currentPathIndex + 1;
+      if (nextPathIdx < paths.length && paths[nextPathIdx].includes(currentFlopNodeId)) {
+        const divergenceIdx = findDivergenceIndex(paths[currentPathIndex], paths[nextPathIdx]);
+        setCurrentPathIndex(nextPathIdx);
+        setCurrentStepIndex(divergenceIdx);
+        setLineAnswer(null);
+        return;
+      }
+    }
+
     const usedIds = latestSession?.usedFlopNodeIds ?? [];
     const unusedIds = flopNodeIds.filter(id => !usedIds.includes(id));
 
@@ -896,33 +937,12 @@ export default function Trainer() {
       setLineAnswer(nodeId);
       lineAnswerTimerRef.current = setTimeout(() => {
         lineAnswerTimerRef.current = null;
-        const latestSession = currentLineSessionRef.current;
-        const latestSessions = lineSessionsRef.current;
-        const usedIds = latestSession?.usedFlopNodeIds ?? [];
-        const unusedIds = flopNodeIds.filter(id => !usedIds.includes(id));
-        if (unusedIds.length > 0) {
-          let matched = false;
-          for (const candidate of unusedIds) {
-            const candidatePathIdx = paths.findIndex(p => !shouldSkipPath(p, candidate));
-            if (candidatePathIdx < 0) continue;
-            setCurrentFlopNodeId(candidate);
-            if (latestSession) {
-              const updated = latestSessions.map(s =>
-                s.id === latestSession.id
-                  ? { ...s, usedFlopNodeIds: [...usedIds, candidate] }
-                  : s
-              );
-              setLineSessions(updated);
-              saveLineSessions(updated);
-            }
-            setCurrentPathIndex(candidatePathIdx);
-            setCurrentStepIndex(0);
-            matched = true;
-            break;
-          }
-          if (!matched) toast("No more scenarios available.");
+        const nextStep = currentStepIndex + 1;
+        if (nextStep < paths[currentPathIndex].length) {
+          setCurrentStepIndex(nextStep);
         } else {
-          toast("No more scenarios available.");
+          toast("Path complete!");
+          advanceLinePath();
         }
         setLineAnswer(null);
       }, 1500);
@@ -1511,7 +1531,7 @@ export default function Trainer() {
         {view === "line-drill-training" && selectedLineDrill && currentLineSession && (
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-full">
             <div className="flex-1 lg:flex-[7] flex flex-col items-center gap-4 lg:gap-6 min-w-0 h-full">
-              {currentNode && heroActions.length > 0 ? (
+              {currentNode ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-2 lg:gap-3 min-h-0 w-full max-w-4xl">
                     <div className="w-full max-w-4xl">
                       <PokerTable
@@ -1530,7 +1550,7 @@ export default function Trainer() {
                           Villain {villainAction?.label ?? "acting"}{villainAction?.betSize ? ` ${villainAction.betSize}` : ""}...
                         </div>
                       </div>
-                    ) : (
+                    ) : heroActions.length > 0 ? (
                       <div className="w-full max-w-lg">
                         <p className="text-xs text-muted-foreground mb-2 text-center">Your action:</p>
                         <div className="grid grid-cols-2 gap-2">
@@ -1563,21 +1583,19 @@ export default function Trainer() {
                           })}
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                   <p className="text-base font-semibold text-foreground">
-                    {currentNode ? "Completing path..." : "All paths complete!"}
+                    All paths complete!
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {currentNode ? "Calculating results." : "You've completed all available decision paths."}
+                    You've completed all available decision paths.
                   </p>
-                  {!currentNode && (
-                    <button onClick={stopLineDrillTraining} className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
-                      Finish Session
-                    </button>
-                  )}
+                  <button onClick={stopLineDrillTraining} className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors">
+                    Finish Session
+                  </button>
                 </div>
               )}
             </div>
