@@ -48,6 +48,7 @@ export default function Trainer() {
   const [villainAction, setVillainAction] = useState<{ label: string; betSize?: string } | null>(null);
   const villainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lineAnswerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingAnswerRef = useRef<{ pathIdx: number; stepIdx: number } | null>(null);
   const [answerObservations, setAnswerObservations] = useState<{ label: string; html: string }[] | null>(null);
 
   const [sessions, setSessions] = useState<SessionData[]>(() => loadSessions());
@@ -138,15 +139,41 @@ export default function Trainer() {
     const drill = lineDrills.find((d) => d.id === selectedLineDrillId);
     if (!drill) return undefined;
     const opp = drill.heroPosition === "BU" ? "BB" : "BU";
+
+    let streetStart = 0;
     for (let i = currentStepIndex; i >= 0; i--) {
+      const node = lineTreeNodes.find(n => n.id === path[i]);
+      if (node && (node.data.nodeType === 'street' || node.data.nodeType === 'street-group' || node.data.nodeType === 'street-header')) {
+        streetStart = i + 1;
+        break;
+      }
+    }
+
+    const sizes: Record<string, string> = {};
+    for (let i = streetStart; i <= currentStepIndex; i++) {
       const node = lineTreeNodes.find(n => n.id === path[i]);
       if (node?.data.betSize && node.data.actionType !== "check" && node.data.actionType !== "call" && node.data.actionType !== "allin" && node.data.actionType !== "fold") {
         const pos = node.data.actor === "hero" ? drill.heroPosition : opp;
-        return { [pos]: node.data.betSize };
+        const label = node.data.actionType.charAt(0).toUpperCase() + node.data.actionType.slice(1);
+        sizes[pos] = `${label} ${node.data.betSize}`;
       }
     }
-    return undefined;
-  }, [currentPathIndex, currentStepIndex, paths, lineTreeNodes, selectedLineDrillId, lineDrills]);
+
+    if (lineAnswer) {
+      const pendingNode = lineTreeNodes.find(n => n.id === lineAnswer);
+      if (pendingNode?.data.betSize && pendingNode.data.actionType !== "check" && pendingNode.data.actionType !== "call" && pendingNode.data.actionType !== "allin" && pendingNode.data.actionType !== "fold") {
+        const pos = pendingNode.data.actor === "hero" ? drill.heroPosition : opp;
+        const label = pendingNode.data.actionType.charAt(0).toUpperCase() + pendingNode.data.actionType.slice(1);
+        sizes[pos] = `${label} ${pendingNode.data.betSize}`;
+      }
+    }
+
+    if (villainAction?.betSize) {
+      sizes[opp] = `${villainAction.label} ${villainAction.betSize}`;
+    }
+
+    return Object.keys(sizes).length > 0 ? sizes : undefined;
+  }, [currentPathIndex, currentStepIndex, paths, lineTreeNodes, selectedLineDrillId, lineDrills, lineAnswer, villainAction]);
 
   useEffect(() => {
     if (!currentPathNodeId) {
@@ -969,7 +996,30 @@ export default function Trainer() {
       obsNodes.push({ label: "Your answer — " + (clicked.data.actionType ?? ""), html: clicked.data.observation });
     }
 
+    const targetPathIdx = findPathContainingEdge(currentPathNodeId, nodeId);
+    const effectivePathIdx = targetPathIdx >= 0 ? targetPathIdx : currentPathIndex;
+    const effectiveStepIdx = targetPathIdx >= 0
+      ? paths[targetPathIdx].indexOf(nodeId)
+      : currentStepIndex;
+    pendingAnswerRef.current = { pathIdx: effectivePathIdx, stepIdx: effectiveStepIdx };
+
     setLineAnswer(nodeId);
+
+    const advanceAfterAnswer = () => {
+      const target = pendingAnswerRef.current!;
+      pendingAnswerRef.current = null;
+      const nextStep = target.stepIdx + 1;
+      if (target.pathIdx !== currentPathIndex) {
+        setCurrentPathIndex(target.pathIdx);
+      }
+      if (nextStep < paths[target.pathIdx].length) {
+        setCurrentStepIndex(nextStep);
+      } else {
+        toast("Path complete!");
+        advanceLinePath();
+      }
+      setLineAnswer(null);
+    };
 
     if (obsNodes.length > 0) {
       setAnswerObservations(obsNodes);
@@ -977,27 +1027,13 @@ export default function Trainer() {
       if (lineAnswerTimerRef.current) clearTimeout(lineAnswerTimerRef.current);
       lineAnswerTimerRef.current = setTimeout(() => {
         lineAnswerTimerRef.current = null;
-        const nextStep = currentStepIndex + 1;
-        if (nextStep < paths[currentPathIndex].length) {
-          setCurrentStepIndex(nextStep);
-        } else {
-          toast("Path complete!");
-          advanceLinePath();
-        }
-        setLineAnswer(null);
+        advanceAfterAnswer();
       }, 1000);
     } else {
       if (lineAnswerTimerRef.current) clearTimeout(lineAnswerTimerRef.current);
       lineAnswerTimerRef.current = setTimeout(() => {
         lineAnswerTimerRef.current = null;
-        const nextStep = currentStepIndex + 1;
-        if (nextStep < paths[currentPathIndex].length) {
-          setCurrentStepIndex(nextStep);
-        } else {
-          toast("Path complete!");
-          advanceLinePath();
-        }
-        setLineAnswer(null);
+        advanceAfterAnswer();
       }, 1500);
     }
 
@@ -1012,12 +1048,27 @@ export default function Trainer() {
 
   function continueAfterObservation() {
     setAnswerObservations(null);
-    const nextStep = currentStepIndex + 1;
-    if (nextStep < paths[currentPathIndex].length) {
-      setCurrentStepIndex(nextStep);
+    const target = pendingAnswerRef.current;
+    pendingAnswerRef.current = null;
+    if (target) {
+      const nextStep = target.stepIdx + 1;
+      if (target.pathIdx !== currentPathIndex) {
+        setCurrentPathIndex(target.pathIdx);
+      }
+      if (nextStep < paths[target.pathIdx].length) {
+        setCurrentStepIndex(nextStep);
+      } else {
+        toast("Path complete!");
+        advanceLinePath();
+      }
     } else {
-      toast("Path complete!");
-      advanceLinePath();
+      const nextStep = currentStepIndex + 1;
+      if (nextStep < paths[currentPathIndex].length) {
+        setCurrentStepIndex(nextStep);
+      } else {
+        toast("Path complete!");
+        advanceLinePath();
+      }
     }
     setLineAnswer(null);
   }
