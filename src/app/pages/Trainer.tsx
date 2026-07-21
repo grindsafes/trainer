@@ -1015,7 +1015,6 @@ export default function Trainer() {
       if (nextStep < paths[target.pathIdx].length) {
         setCurrentStepIndex(nextStep);
       } else {
-        toast("Path complete!");
         advanceLinePath();
       }
       setLineAnswer(null);
@@ -1058,7 +1057,6 @@ export default function Trainer() {
       if (nextStep < paths[target.pathIdx].length) {
         setCurrentStepIndex(nextStep);
       } else {
-        toast("Path complete!");
         advanceLinePath();
       }
     } else {
@@ -1066,7 +1064,6 @@ export default function Trainer() {
       if (nextStep < paths[currentPathIndex].length) {
         setCurrentStepIndex(nextStep);
       } else {
-        toast("Path complete!");
         advanceLinePath();
       }
     }
