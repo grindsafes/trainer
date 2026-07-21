@@ -232,16 +232,58 @@ export default function Trainer() {
       return;
     }
 
-    // Auto-skip when all children are streets (non-street parent)
-    if (children.length > 0 && nonStreetChildren.length === 0) {
-      const nextStep = currentStepIndex + 1;
-      const isLastStep = nextStep >= (paths[currentPathIndex]?.length ?? 0);
-      if (isLastStep) {
-        advanceLinePath();
-      } else {
-        setCurrentStepIndex(nextStep);
+    // Non-street node with all street children — runout branching point
+    if (nonStreetChildren.length === 0 && streetChildren.length > 0) {
+      const hasWeights = streetChildren.some(c => c.data.weight !== undefined && c.data.weight > 0);
+      const selectedChild: Node<LineNodeData> | undefined = hasWeights
+        ? weightedRandomSelect(streetChildren)
+        : streetChildren[Math.floor(Math.random() * streetChildren.length)];
+      if (!selectedChild) return;
+
+      let advancePathIdx = currentPathIndex;
+      let advanceStepIdx = currentStepIndex;
+      const currentPath = paths[currentPathIndex];
+      if (currentPath) {
+        const parentPos = currentPath.indexOf(currentPathNodeId);
+        if (parentPos >= 0) {
+          const expectedChild = currentPath[parentPos + 1];
+          if (expectedChild !== selectedChild.id) {
+            const newPathIdx = findPathContainingEdge(currentPathNodeId, selectedChild.id);
+            if (newPathIdx >= 0) {
+              advancePathIdx = newPathIdx;
+              const childPos = paths[newPathIdx].indexOf(selectedChild.id);
+              if (childPos >= 0) {
+                advanceStepIdx = childPos;
+              }
+            }
+          }
+        }
       }
-      return;
+
+      if (advancePathIdx !== currentPathIndex) {
+        setCurrentPathIndex(advancePathIdx);
+      }
+      if (advanceStepIdx !== currentStepIndex) {
+        setCurrentStepIndex(advanceStepIdx);
+      }
+
+      const nextStep = advanceStepIdx + 1;
+      const isLastStep = nextStep >= (paths[advancePathIdx]?.length ?? 0);
+
+      if (villainTimerRef.current) { clearTimeout(villainTimerRef.current); villainTimerRef.current = null; }
+
+      villainTimerRef.current = setTimeout(() => {
+        villainTimerRef.current = null;
+        if (isLastStep) {
+          advanceLinePath();
+        } else {
+          setCurrentStepIndex(nextStep);
+        }
+      }, 600);
+
+      return () => {
+        if (villainTimerRef.current) { clearTimeout(villainTimerRef.current); villainTimerRef.current = null; }
+      };
     }
 
     const isVillain = nonStreetChildren.length > 0 && nonStreetChildren.every(c => c.data.actor === 'villain');
